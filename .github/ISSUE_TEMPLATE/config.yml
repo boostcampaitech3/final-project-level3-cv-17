@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ❗Issue Template
+    url: https://github.com/boostcampaitech3/final-project-level3-cv-17/issues/new?template=issue_template.md
+    about: Please use this default template
+  - name: 🐞 Bug Report
+    url: https://github.com/boostcampaitech3/final-project-level3-cv-17/issues/new?template=bug.md
+    about: Please report your bug
