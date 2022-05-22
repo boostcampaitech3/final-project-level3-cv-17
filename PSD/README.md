@@ -1,10 +1,10 @@
 # PSD 사용 시 참고사항
 
 ### 0. Environment
-python==3.8.5
-torch==1.7.1
-torchvision==0.8.2
-cuda version : 11
+python==3.8.5  
+torch==1.7.1  
+torchvision==0.8.2  
+cuda version : 11  
 
 ### 1. data 
 data 폴더를 꼭 만들어주셔서 실험하고자하는 데이터를 넣어주셔야 합니다.
