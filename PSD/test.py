@@ -1,20 +1,24 @@
+import os
+import numpy as np
+from PIL import Image
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torchvision.utils as vutils
-from datasets.pretrain_datasets import ETCDataset, TrainData, ValData, TestData, TestData2, TestData_GCA, TestData_FFA
+
+from datasets.pretrain_datasets import TrainData, ValData, TestData, TestData2, TestData_GCA, TestData_FFA
 from models.GCA import GCANet
 from models.FFA import FFANet
 from models.MSBDN import MSBDNNet
-from utils import to_psnr, print_log, validation, adjust_learning_rate
-import numpy as np
-import os
-from PIL import Image
+from utils import to_psnr, print_log, validation, adjust_learning_rate, make_directory
+
+from datasets.our_datasets import ETCDataset
 
 epoch = 14
 
-test_data_dir = '/opt/ml/final-project-level3-cv-17/PSD/data/baek/'
+test_data_dir = '../data/Hidden/hazy/'
     
 device_ids = [Id for Id in range(torch.cuda.device_count())]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -27,7 +31,7 @@ net = nn.DataParallel(net, device_ids=device_ids)
 
 # net.load_state_dict(torch.load('PSD-GCANET'))
 # net.load_state_dict(torch.load('PSD-FFANET'))
-net.load_state_dict(torch.load('/opt/ml/final-project-level3-cv-17/PSD/pretrained_model/PSB-MSBDN'))
+net.load_state_dict(torch.load('/opt/ml/final-project-level3-cv-17/PSD/pretrained_model/PSD-MSBDN'))
 
 net.eval()
 
@@ -35,9 +39,8 @@ net.eval()
 test_data_loader = DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
 
 
-output_dir = '/opt/ml/final-project-level3-cv-17/PSD/output/sample/baek/'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+output_dir = '/opt/ml/final-project-level3-cv-17/PSD/output/' + test_data_dir.split('/')[2] + '/'
+make_directory(output_dir)
     
 with torch.no_grad():
     for batch_id, val_data in enumerate(test_data_loader):

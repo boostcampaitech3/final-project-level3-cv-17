@@ -245,3 +245,8 @@ def load_model(backbone, model_dir, device, device_ids):
         
         
     return net
+
+
+def make_directory(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)

@@ -1,29 +1,37 @@
 import os
 import random
 from shutil import copyfile
+from utils import make_directory
 
-data_type = 'MRFID'
+data_list = [
+    'Crawling',
+    'RESIDE_SOTS_OUT',
+    'Hidden',
+    'MRFID'
+]
 
-if data_type == 'Crawling':
-    original_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/crawling'
-    sample_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/sample/crawl_s'
-    sample_num = 7
-elif data_type == 'SOTS':
-    original_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/outdoor/hazy'
-    sample_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/sample/sots_s'
-    sample_num = 7
-elif data_type == 'baek':
-    original_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/baek'
-    sample_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/sample/baek_s'
-    sample_num = 3
-elif data_type == 'MRFID':
-    original_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/MRFID/fog'
-    sample_path = '/opt/ml/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors/PSD/data/sample/MRFID'
-    sample_num = 7
-else:
-    ValueError
+sample_num = 5
 
-data_sample = random.sample(os.listdir(original_path), sample_num)
+for data in data_list:
 
-for s_data in data_sample:
-    copyfile(os.path.join(original_path, s_data), os.path.join(sample_path, s_data)) 
+    if data == 'Crawling':
+        original_path = '../data/Crawling/hazy'
+        sample_path = '../data/sample/Crawling'
+    elif data == 'RESIDE_SOTS_OUT':
+        original_path = '../data/RESIDE_SOTS_OUT/hazy'
+        sample_path = '../data/sample/RESIDE_SOTS_OUT'
+    elif data == 'Hidden':
+        original_path = '../data/Hidden/hazy'
+        sample_path = '../data/sample/Hidden'
+    elif data == 'MRFID':
+        original_path = '../data/MRFID/hazy'
+        sample_path = '../data/sample/MRFID'
+    else:
+        ValueError
+
+    make_directory(sample_path)
+
+    data_sample = random.sample(os.listdir(original_path), sample_num)
+
+    for s_data in data_sample:
+        copyfile(os.path.join(original_path, s_data), os.path.join(sample_path, s_data)) 
