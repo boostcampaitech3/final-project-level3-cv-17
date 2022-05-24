@@ -9,6 +9,7 @@ PSD/pretrained_model/PSD-FFANET
 PSD/pretrained_model/PSD-GCANET
 PSD/pretrained_model/PSD-MSBDN
 
+data/
 data/sample/
 data/BeDDE/gt/
 data/BeDDE/hazy/
