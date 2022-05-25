@@ -19,6 +19,7 @@ data는 gdrive에 zip 파일로 올려두었습니다.
 │   │   ├── gt
 │   │   └── hazy
 │   ├── Hidden
+│   │   ├── gt_clahe
 │   │   └── hazy
 │   ├── NH_HAZE
 │   │   ├── gt
@@ -27,6 +28,7 @@ data는 gdrive에 zip 파일로 올려두었습니다.
 │   │   ├── gt
 │   │   └── hazy
 │   ├── RESIDE_RTTS
+│   │   ├── gt_clahe
 │   │   └── hazy
 │   ├── RESIDE_SOTS_OUT
 │   │   ├── gt
