@@ -1,9 +1,9 @@
 # PSD 사용 시 참고사항
 
 ### 0. Environment
-python==3.8.5
-torch==1.7.1
-torchvision==0.8.2
+python==3.8.5 <br>
+torch==1.7.1 <br>
+torchvision==0.8.2 <br>
 cuda==11.0
 
 ### 1. Directory
