@@ -47,10 +47,10 @@ data는 gdrive에 zip 파일로 올려두었습니다.
 ``` 
 
 ### 2. our_datasets.py
-SynTrainData : Train dataset (gt & hazy)
-RealTrainData_CLAHE : Train dataset (gt_clahe & hazy) : gt_clahe는 CLAHE.py 결과로 얻을 수 있습니다.
-SynValData : Valid dataset (gt & hazy)
-ETCDataset : Test dataset (hazy)
+SynTrainData : Train dataset (gt & hazy) <br>
+RealTrainData_CLAHE : Train dataset (gt_clahe & hazy) : gt_clahe는 CLAHE.py 결과로 얻을 수 있습니다. <br>
+SynValData : Valid dataset (gt & hazy) <br>
+ETCDataset : Test dataset (hazy) <br>
 
 ### 3. make_data.py
 모든 데이터로 테스트하는 시간이 오래걸려서 각 폴더별로 5개씩 샘플링하여 새로운 데이터폴더를 만드는 코드입니다.
