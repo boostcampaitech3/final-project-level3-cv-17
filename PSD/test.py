@@ -19,6 +19,7 @@ from datasets.our_datasets import ETCDataset
 epoch = 14
 
 test_data_dir = '../data/Hidden/hazy/'
+# test_data_dir = '../data/sample/Hidden/'
     
 device_ids = [Id for Id in range(torch.cuda.device_count())]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

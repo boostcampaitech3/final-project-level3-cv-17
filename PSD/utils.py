@@ -1,5 +1,10 @@
 import os
+import re
 import time
+import glob
+import random
+import numpy as np
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -100,6 +105,7 @@ def validation(net, net_name, val_data_loader, device, category, save_tag=False)
             haze = haze.to(device)
             gt = gt.to(device)
             B, _, H, W = haze.shape
+
             if net_name == 'MSBDNNet':
                 if haze.size()[2] % 16 != 0 or haze.size()[3] % 16 != 0:
                     haze = F.upsample(haze, [haze.size()[2] + 16 - haze.size()[2] % 16,
@@ -107,23 +113,23 @@ def validation(net, net_name, val_data_loader, device, category, save_tag=False)
                 if gt.size()[2] % 16 != 0 or gt.size()[3] % 16 != 0:
                     gt = F.upsample(gt, [gt.size()[2] + 16 - gt.size()[2] % 16, 
                                     gt.size()[3] + 16 - gt.size()[3] % 16], mode='bilinear')
-                dehaze = net(haze, 0, True)
+                out, out_J, out_T, out_A, out_I = net(haze, haze_A, True)
             else:
-                dehaze = net(haze, True)
+                out, out_J, out_T, out_A, out_I = net(haze, True)
             #T = net(haze)
             #dc = get_dark_channel(haze, 15)
             #A = get_atmosphere(haze, dc, 0.001).repeat_interleave(H*W).view(B, 3, H, W)
             #dehaze = ((haze - A) / T + A).clamp(0, 1)
 
         # --- Calculate the average PSNR --- #
-        psnr_list.extend(to_psnr(dehaze, gt))
+        psnr_list.extend(to_psnr(out_J, gt))
 
         # --- Calculate the average SSIM --- #
-        ssim_list.extend(ssim(dehaze, gt))
+        ssim_list.extend(ssim(out_J, gt))
 
         # --- Save image --- #
         if save_tag:
-            save_image(dehaze, image_name, category)
+            save_image(out_J, image_name, category)
         if batch_id % 20 == 0:
             print('Batch_id:', batch_id)
 
@@ -145,10 +151,10 @@ def print_log(epoch, num_epochs, one_epoch_time, train_psnr, val_psnr, val_ssim,
           .format(one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim))
 
     # --- Write the training log --- #
-    with open('/output/{}_log.txt'.format(category), 'a') as f:
-        print('Date: {0}s, Time_Cost: {1:.0f}s, Epoch: [{2}/{3}], Train_PSNR: {4:.2f}, Val_PSNR: {5:.2f}, Val_SSIM: {6:.4f}'
-              .format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-                      one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim), file=f)
+    # with open('/output/{}_log.txt'.format(category), 'a') as f:
+    #     print('Date: {0}s, Time_Cost: {1:.0f}s, Epoch: [{2}/{3}], Train_PSNR: {4:.2f}, Val_PSNR: {5:.2f}, Val_SSIM: {6:.4f}'
+    #           .format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+    #                   one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim), file=f)
 
 
 def adjust_learning_rate(optimizer, epoch, category, lr_decay=0.5):
@@ -220,7 +226,7 @@ def load_model(backbone, model_dir, device, device_ids):
         net = GCANet()
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
-        model_path = os.path.join(model_dir, 'GCA_pretrain.pth')
+        model_path = os.path.join(model_dir, 'PSD-GCANET')
         net.load_state_dict(torch.load(model_path))
         
         
@@ -231,7 +237,7 @@ def load_model(backbone, model_dir, device, device_ids):
         net = FFANet(gps=gps,blocks=blocks)
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
-        model_path = os.path.join(model_dir, 'FFA_pretrain.pth')
+        model_path = os.path.join(model_dir, 'PSD-FFANET')
         net.load_state_dict(torch.load(model_path))
         
         
@@ -240,7 +246,7 @@ def load_model(backbone, model_dir, device, device_ids):
         net = MSBDNNet()
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
-        model_path = os.path.join(model_dir, 'MSBDNNet_pretrain.pth')
+        model_path = os.path.join(model_dir, 'PSD-MSBDN')
         net.load_state_dict(torch.load(model_path))
         
         
@@ -250,3 +256,34 @@ def load_model(backbone, model_dir, device, device_ids):
 def make_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
+
+
+def increment_path(path, exist_ok=False):
+    """ Automatically increment path, i.e. runs/exp --> runs/exp0, runs/exp1 etc.
+    Args:
+        path (str or pathlib.Path): f"{model_dir}/{args.name}".
+        exist_ok (bool): whether increment path (increment if False).
+    """
+    path = Path(path)
+    if (path.exists() and exist_ok) or (not path.exists()):
+        return str(path)
+    else:
+        dirs = glob.glob(f"{path}*")
+        matches = [
+            re.search(rf"%s(\d+)" % path.stem, d) for d in dirs
+        ]  
+        i = [int(m.groups()[0]) for m in matches if m]  
+        n = max(i) + 1 if i else 2
+        return f"{path}{n}"
+
+
+def set_seed(seed):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
