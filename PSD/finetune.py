@@ -118,6 +118,17 @@ for epoch in range(opt.num_epochs):
         label_gt = label_gt.to(device)
         unlabel_haze = unlabel_haze.to(device)
         unlabel_gt = unlabel_gt.to(device)
+        # print(f'>>> label_haze shape : {label_haze.shape}, label_gt : {label_gt.shape}, unlabel_haze.shape : {unlabel_haze.shape}, unlabel_gt.shape : {unlabel_gt.shape}')
+        # --- viz --- #
+        if batch_id == 0:
+            batch_train_unlabel_imgs = []
+            batch_train_unlabel_clahe = []
+            for train_unlabel_img, train_unlabel_gt in zip(unlabel_haze, unlabel_gt):
+                train_unlabel_img = train_unlabel_img.permute(1,2,0).cpu().numpy()
+                train_unlabel_gt = train_unlabel_gt.permute(1,2,0).cpu().numpy()
+                batch_train_unlabel_imgs.append(wandb.Image(train_unlabel_img))
+                batch_train_unlabel_clahe.append(wandb.Image(train_unlabel_gt))
+            wandb.log({'train_unlabel_hazy_image':batch_train_unlabel_imgs, 'train_unlabel_dehaze_with_clahe_image':batch_train_unlabel_clahe}, commit=False)
 
         # --- train --- #
         optimizer.zero_grad()
@@ -129,6 +140,21 @@ for epoch in range(opt.num_epochs):
         out, J, T, A, I = net(unlabel_haze)
         out_o, J_o, T_o, _, _ = net_o(unlabel_haze)
         I2 = T * unlabel_gt + (1 - T) * A
+
+        finetune_out = torch.squeeze(J.clamp(0, 1).cpu())
+        backbone_out = torch.squeeze(J_o.clamp(0, 1).cpu())
+        
+        # I2 shape : torch.Size([6, 3, 256, 256]), out shape : torch.Size([6, 64, 256, 256]), out_o.shape : torch.Size([6, 64, 256, 256])
+        # print(f'>>> I2 shape : {I2.shape}, finetune_out : {finetune_out.shape}, backbone_out.shape : {backbone_out.shape}')
+        if batch_id == 0:
+            batch_b_out_imgs = []
+            batch_f_out_imgs = []
+            for f_out, b_out in zip(finetune_out, backbone_out):
+                batch_b_out = b_out.detach().permute(1,2,0).cpu().numpy()
+                batch_f_out = f_out.detach().permute(1,2,0).cpu().numpy()
+                batch_b_out_imgs.append(wandb.Image(batch_b_out))
+                batch_f_out_imgs.append(wandb.Image(batch_f_out))
+            wandb.log({'backbone_output':batch_b_out_imgs, 'finetune_output':batch_f_out_imgs}, commit=False)
 
         # --- losses --- #
         energy_dc_loss = loss_dc(unlabel_haze, T)
@@ -143,6 +169,10 @@ for epoch in range(opt.num_epochs):
         loss = opt.lambda_dc*energy_dc_loss + opt.lambda_bc*bc_loss + opt.lambda_CLAHE*CLAHE_loss
         loss += opt.lambda_rec*rec_loss + opt.lambda_lwf_sky*lwf_loss_sky
         loss += opt.lambda_lwf_label*lwf_loss_label + opt.lambda_lwf_unlabel*lwf_loss_unlabel
+
+        wandb.log({'energy_dc_loss':energy_dc_loss, 'bc_loss':bc_loss, 'CLAHE_loss':CLAHE_loss, 'rec_loss':rec_loss,
+                    'lwf_loss_sky':lwf_loss_sky, 'lwf_loss_label':lwf_loss_label, 'lwf_loss_unlabel':lwf_loss_unlabel, 'total_loss':loss,
+                    }, commit=False)
 
         loss.backward()
         optimizer.step()
@@ -160,6 +190,7 @@ for epoch in range(opt.num_epochs):
     
     val_psnr, val_ssim = validation(net, opt.backbone, val_data_loader, device, opt.category)
     one_epoch_time = time.time() - start_time
+    wandb.log({'val_psnr':val_psnr, 'val_ssim':val_ssim})
     print_log(epoch+1, opt.num_epochs, one_epoch_time, train_psnr, val_psnr, val_ssim, opt.category)
 
 # --- output test images --- #
