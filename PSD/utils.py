@@ -150,11 +150,11 @@ def print_log(epoch, num_epochs, one_epoch_time, train_psnr, val_psnr, val_ssim,
     print('({0:.0f}s) Epoch [{1}/{2}], Train_PSNR:{3:.2f}, Val_PSNR:{4:.2f}, Val_SSIM:{5:.4f}'
           .format(one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim))
 
-    # --- Write the training log --- #
-    # with open('/output/{}_log.txt'.format(category), 'a') as f:
-    #     print('Date: {0}s, Time_Cost: {1:.0f}s, Epoch: [{2}/{3}], Train_PSNR: {4:.2f}, Val_PSNR: {5:.2f}, Val_SSIM: {6:.4f}'
-    #           .format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-    #                   one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim), file=f)
+    --- Write the training log --- #
+    with open('/output/{}_log.txt'.format(category), 'a') as f:
+        print('Date: {0}s, Time_Cost: {1:.0f}s, Epoch: [{2}/{3}], Train_PSNR: {4:.2f}, Val_PSNR: {5:.2f}, Val_SSIM: {6:.4f}'
+              .format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                      one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim), file=f)
 
 
 def adjust_learning_rate(optimizer, epoch, category, lr_decay=0.5):
@@ -222,16 +222,13 @@ def generate_test_images(net, TestData, num_epochs, chosen_epoch):
 def load_model(backbone, model_dir, device, device_ids):
     
     if backbone == 'GCANet':
-        
         net = GCANet()
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
         model_path = os.path.join(model_dir, 'PSD-GCANET')
         net.load_state_dict(torch.load(model_path))
         
-        
     if backbone == 'FFANet':
-        
         gps = 3
         blocks = 19
         net = FFANet(gps=gps,blocks=blocks)
@@ -240,15 +237,12 @@ def load_model(backbone, model_dir, device, device_ids):
         model_path = os.path.join(model_dir, 'PSD-FFANET')
         net.load_state_dict(torch.load(model_path))
         
-        
     if backbone == 'MSBDNNet':
-        
         net = MSBDNNet()
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
         model_path = os.path.join(model_dir, 'PSD-MSBDN')
         net.load_state_dict(torch.load(model_path))
-        
         
     return net
 
