@@ -18,7 +18,7 @@ from datasets.our_datasets import ETCDataset
 
 epoch = 14
 
-test_data_dir = '../data/Hidden/hazy/'
+test_data_dir = '../../data/Hidden/hazy/'
     
 device_ids = [Id for Id in range(torch.cuda.device_count())]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -31,7 +31,7 @@ net = nn.DataParallel(net, device_ids=device_ids)
 
 # net.load_state_dict(torch.load('PSD-GCANET'))
 # net.load_state_dict(torch.load('PSD-FFANET'))
-net.load_state_dict(torch.load('/opt/ml/final-project-level3-cv-17/PSD/pretrained_model/PSD-MSBDN'))
+net.load_state_dict(torch.load('/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model/PSD-MSBDN'))
 
 net.eval()
 
@@ -39,17 +39,18 @@ net.eval()
 test_data_loader = DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
 
 
-output_dir = '/opt/ml/final-project-level3-cv-17/PSD/output/' + test_data_dir.split('/')[2] + '/'
+output_dir = '/opt/ml/input/final-project-level3-cv-17/PSD/output/' + test_data_dir.split('/')[2] + '/'
 make_directory(output_dir)
     
 with torch.no_grad():
     for batch_id, val_data in enumerate(test_data_loader):
-        if batch_id == 1:
-            break
+        # if batch_id == 1:
+        #     break
         if batch_id > 150:
             break
         # haze, name = val_data # For GCA
         haze, haze_A, name = val_data # For FFA and MSBDN
+        print(haze.shape, haze_A.shape) # torch.Size([1, 3, 3024, 3024]) torch.Size([1, 3, 512, 512])
         haze.to(device)
         # vutils.save_image(haze_A, output_dir + name[0].split('.')[0] + '_MyModel_{}.png'.format(batch_id))
         print(batch_id, 'BEGIN!')
