@@ -1,22 +1,23 @@
-import sys
-import torch.utils.data as data
 import os
-from PIL import Image
-from random import randrange
+import sys
+import random
 import numpy as np
-from torchvision.transforms import Compose, ToTensor, Normalize
+from PIL import Image
+
 import torch
+from torchvision.transforms import Compose, ToTensor, Normalize
 
 
-class SynTrainData(data.Dataset):
-    # RESIDE-OTS
-    # BeDDE
-    # MRFID
-    def __init__(self, crop_size, train_data_dir, haze_folder, gt_folder):
+class SynTrainData(torch.utils.data.Dataset):
+    def __init__(self, crop_size, train_data_dir):
         super().__init__()
+
         self.data_name = train_data_dir.split('/')[-1]
-        self.haze_folder = haze_folder
-        self.gt_folder = gt_folder
+        if self.data_name == 'RESIDE-OTS':
+            self.haze_folder = 'hazy/part1'
+        else:
+            self.haze_folder = 'hazy'
+        self.gt_folder = 'gt'
 
         self.haze_dir = os.path.join(train_data_dir, self.haze_folder)
         self.gt_dir = os.path.join(train_data_dir, self.gt_folder)
@@ -25,7 +26,7 @@ class SynTrainData(data.Dataset):
         self.crop_size = crop_size
 
     def __getitem__(self, index):
-        crop_width, crop_height =  self.crop_size
+        crop_width, crop_height = self.crop_size
         haze_name = self.haze_names[index]
         haze_name = os.path.join(self.haze_dir,haze_name)
         
@@ -35,8 +36,11 @@ class SynTrainData(data.Dataset):
         elif self.data_name == 'BeDDE':
             gt_name = gt_name.split('_')[0] + '_clear.png'
         elif self.data_name == 'MRFID':
-            gt_name = gt_name.split('-')[0] + '0.png'
-        
+            gt_name = gt_name[:-5] + '0.jpg'
+        elif self.data_name == 'NH_HAZE':
+            gt_name = haze_name.replace(self.haze_folder, self.gt_folder)
+        elif self.data_name == 'O_HAZE':
+            gt_name = haze_name.replace(self.haze_folder, 'GT')
 
         haze_img = Image.open(haze_name).convert('RGB')
         gt_img = Image.open(gt_name).convert('RGB')
@@ -53,7 +57,7 @@ class SynTrainData(data.Dataset):
             width, height = haze_img.size
         
         # --- random crop --- #
-        x, y = randrange(0, width - crop_width + 1), randrange(0, height - crop_height + 1)
+        x, y = random.randrange(0, width - crop_width + 1), random.randrange(0, height - crop_height + 1)
         haze_crop_img = haze_img.crop((x, y, x + crop_width, y + crop_height))
         gt_crop_img = gt_img.crop((x, y, x + crop_width, y + crop_height))
         
@@ -62,9 +66,6 @@ class SynTrainData(data.Dataset):
 
         haze = transform_haze(haze_crop_img)
         gt = transform_gt(gt_crop_img)
-        
-        if list(haze.shape)[0] != 3 or list(gt.shape)[0] != 3:
-            raise Exception('Bad image channel: {}'.format(gt_name))
 
         return haze, gt
 
@@ -73,14 +74,14 @@ class SynTrainData(data.Dataset):
         return len(self.haze_names)
 
 
-class RealTrainData_CLAHE(data.Dataset):
+class RealTrainData_CLAHE(torch.utils.data.Dataset):
     # Hidden
     # RESIDE_RTTS
-    def __init__(self, crop_size, train_data_dir, haze_folder, gt_folder):
+    def __init__(self, crop_size, train_data_dir):
         super().__init__()
         self.data_name = train_data_dir.split('/')[-1]
-        self.haze_folder = haze_folder
-        self.gt_folder = gt_folder
+        self.haze_folder = 'hazy'
+        self.gt_folder = 'gt_clahe'
 
         self.haze_dir = os.path.join(train_data_dir, self.haze_folder)
         self.gt_dir = os.path.join(train_data_dir, self.gt_folder)
@@ -89,7 +90,7 @@ class RealTrainData_CLAHE(data.Dataset):
         self.crop_size = crop_size
 
     def __getitem__(self, index):
-        crop_width, crop_height =  self.crop_size
+        crop_width, crop_height = self.crop_size
         haze_name = self.haze_names[index]
         haze_name = os.path.join(self.haze_dir,haze_name)
 
@@ -110,7 +111,7 @@ class RealTrainData_CLAHE(data.Dataset):
             width, height = haze_img.size
         
         # --- x,y coordinate of left-top corner --- #
-        x, y = randrange(0, width - crop_width + 1), randrange(0, height - crop_height + 1)
+        x, y = random.randrange(0, width - crop_width + 1), random.randrange(0, height - crop_height + 1)
         haze_crop_img = haze_img.crop((x, y, x + crop_width, y + crop_height))
         gt_crop_img = gt_img.crop((x, y, x + crop_width, y + crop_height))
         
@@ -120,9 +121,6 @@ class RealTrainData_CLAHE(data.Dataset):
         haze = transform_haze(haze_crop_img)
         gt = transform_gt(gt_crop_img)
 
-        if list(haze.shape)[0] != 3 or list(gt.shape)[0] != 3:
-            raise Exception('Bad image channel: {}'.format(gt_name))
-
         return haze, gt
 
 
@@ -130,13 +128,16 @@ class RealTrainData_CLAHE(data.Dataset):
         return len(self.haze_names)
 
 
-class SynValData(data.Dataset):
-    # RESIDE_SOTS_OUT
-    def __init__(self, val_data_dir, haze_folder, gt_folder):
+class SynValData(torch.utils.data.Dataset):
+    def __init__(self, val_data_dir):
         super().__init__()
 
-        self.haze_folder = haze_folder
-        self.gt_folder = gt_folder
+        self.data_name = val_data_dir.split('/')[-1]
+        if self.data_name == 'RESIDE-OTS':
+            self.haze_folder = 'hazy/part1'
+        else:
+            self.haze_folder = 'hazy'
+        self.gt_folder = 'gt'
 
         self.haze_dir = os.path.join(val_data_dir, self.haze_folder)
         self.gt_dir = os.path.join(val_data_dir, self.gt_folder)
@@ -146,6 +147,16 @@ class SynValData(data.Dataset):
     def get_images(self, index):
         haze_name = self.haze_names[index]
         gt_name = haze_name.replace(self.haze_folder, self.gt_folder)
+        if self.data_name == 'RESIDE-OTS':
+            gt_name = gt_name.split('_')[0] + '.jpg'
+        elif self.data_name == 'BeDDE':
+            gt_name = gt_name.split('_')[0] + '_clear.png'
+        elif self.data_name == 'MRFID':
+            gt_name = gt_name[:-5] + '0.jpg'
+        elif self.data_name == 'NH_HAZE':
+            gt_name = haze_name.replace(self.haze_folder, self.gt_folder)
+        elif self.data_name == 'O_HAZE':
+            gt_name = haze_name.replace(self.haze_folder, 'GT')
         
         haze_img = Image.open(os.path.join(self.haze_dir,haze_name)).convert('RGB')
         gt_img = Image.open(os.path.join(self.gt_dir,gt_name)).convert('RGB')
@@ -159,9 +170,6 @@ class SynValData(data.Dataset):
         haze = transform_haze(haze_img)
         haze_reshaped = transform_haze(haze_reshaped)
         gt = transform_gt(gt_img)
-
-        if list(haze.shape)[0] != 3 or list(gt.shape)[0] != 3:
-            raise Exception('Bad image channel: {}'.format(gt_name))
         
         return haze, haze_reshaped, gt, haze_name
 
@@ -173,7 +181,7 @@ class SynValData(data.Dataset):
         return len(self.haze_names)
 
 
-class ETCDataset(data.Dataset):
+class ETCDataset(torch.utils.data.Dataset):
     def __init__(self, val_data_dir):
         super().__init__()
 
@@ -182,12 +190,10 @@ class ETCDataset(data.Dataset):
 
     def get_images(self, index):
         haze_name = self.haze_names[index]
-        #gt_name = haze_name.split('_')[0] + '.png'
         haze_img = Image.open(os.path.join(self.haze_dir,haze_name)).convert('RGB')
         haze_reshaped = haze_img
-        haze_reshaped = haze_reshaped.resize((512, 512))
-        #gt_img = Image.open(self.gt_dir + gt_name)
-
+        haze_reshaped = haze_reshaped.resize((512, 512), Image.ANTIALIAS)
+        
         # --- Transform to tensor --- #
         transform_haze = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         transform_gt = Compose([ToTensor()])
@@ -195,7 +201,6 @@ class ETCDataset(data.Dataset):
         haze_reshaped = transform_haze(haze_reshaped)
         #haze_edge_data = edge_compute(haze)
         #haze = torch.cat((haze, haze_edge_data), 0)
-        #gt = transform_gt(gt_img)
 
         return haze, haze_reshaped, haze_name
 
@@ -210,7 +215,7 @@ class ETCDataset(data.Dataset):
 if __name__=='__main__':
     
     test_data_dir = '/opt/ml/final-project-level3-cv-17/data/RESIDE_SOTS_OUT/hazy'
-    test_data_loader = data.DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
+    test_data_loader = torch.utils.data.DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
     for i, data in enumerate(test_data_loader):
        print(f'rst[0] : {data[0].shape}')
        print(f'rst[1] : {data[1].shape}')

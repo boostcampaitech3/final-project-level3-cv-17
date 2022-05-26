@@ -8,15 +8,16 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torchvision.utils as vutils
 
-from datasets.pretrain_datasets import TrainData, ValData, TestData, TestData2, TestData_GCA, TestData_FFA
+from datasets.our_datasets import ETCDataset
+from datasets.pretrain_datasets import TestData_GCA
 from models.GCA import GCANet
 from models.FFA import FFANet
 from models.MSBDN import MSBDNNet
-from utils import to_psnr, print_log, validation, adjust_learning_rate, make_directory
+from utils import make_directory
 
-from datasets.our_datasets import ETCDataset
+import warnings
+warnings.filterwarnings("ignore")
 
-epoch = 14
 
 test_data_dir = '../data/Hidden/hazy/'
 # test_data_dir = '../data/sample/Hidden/'
@@ -45,15 +46,11 @@ make_directory(output_dir)
     
 with torch.no_grad():
     for batch_id, val_data in enumerate(test_data_loader):
-        if batch_id == 1:
-            break
-        if batch_id > 150:
-            break
         # haze, name = val_data # For GCA
         haze, haze_A, name = val_data # For FFA and MSBDN
         haze.to(device)
+
         # vutils.save_image(haze_A, output_dir + name[0].split('.')[0] + '_MyModel_{}.png'.format(batch_id))
-        print(batch_id, 'BEGIN!')
 
         # pred = net(haze, 0, True, False) # For GCA
         _, pred, T, A, I = net(haze, haze_A, True) # For FFA and MSBDN

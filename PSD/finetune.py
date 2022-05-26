@@ -1,23 +1,14 @@
-import os
 import argparse
-import time
 import copy
 import wandb
 import pyiqa
 from tqdm import tqdm
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-from torchvision.models import vgg16
-import torchvision.utils as vutils
-
 from datasets.concat_dataset import ConcatDataset
 from datasets.our_datasets import SynTrainData, RealTrainData_CLAHE, SynValData
+from losses.energy_functions import energy_dc_loss
+from losses.loss_functions import bright_channel, lwf_sky
 from utils import *
-from losses.energy_functions import *
-from losses.loss_functions import *
 from wandb_setup import wandb_login, wandb_init
 
 import warnings
@@ -28,21 +19,19 @@ def get_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--backbone', type=str, default='MSBDNNet', help='Backbone model(GCANet/FFANet/MSBDNNet)')
+    parser.add_argument('--category', type=str, default='outdoor', help='dataset type: indoor / outdoor') # outdoor only
 
     parser.add_argument('--lr', type=float, default=0.00001)
     parser.add_argument('--num_epochs', type=int, default=20)
     parser.add_argument('--train_batch_size', type=int, default=6)
-    parser.add_argument('--val_batch_size', type=int, default=1)
+    parser.add_argument('--val_batch_size', type=int, default=1) # do not change
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--crop_size', type=int, default=256, help='size of random crop')
-    parser.add_argument('--category', type=str, default='outdoor', help='dataset type: indoor / outdoor') # outdoor only
-    parser.add_argument('--print_freq', type=int, default=20)
 
     parser.add_argument('--work_dir', type=str, default='/opt/ml/final-project-level3-cv-17/PSD/work_dirs')
-    parser.add_argument('--label_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/BeDDE')
+    parser.add_argument('--label_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/MRFID')
     parser.add_argument('--unlabel_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/RESIDE_RTTS')
-    parser.add_argument('--pseudo_gt_dir', type=str, default='/data/nnice1216/Dehazing/') # not use now
-    parser.add_argument('--val_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/RESIDE_SOTS_OUT')
+    parser.add_argument('--val_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/BeDDE')
     parser.add_argument('--pretrain_model_dir', type=str, default='/opt/ml/final-project-level3-cv-17/PSD/pretrained_model')
 
     parser.add_argument('--lambda_dc', type=float, default=2e-3)
@@ -57,157 +46,200 @@ def get_parser():
     return opt
 
 
-# --- setup --- #
-opt = get_parser()
-work_dir_exp = increment_path(os.path.join(opt.work_dir, 'exp'))
-make_directory(work_dir_exp)
+def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, net_o, loss_dc, optimizer,
+          metric_PSNR, metric_SSIM, metric_NIQE, metric_BRISQUE, metric_NIMA):
+    best_PSNR, best_PSNR_epoch = 0.0, 0
+    best_SSIM, best_SSIM_epoch = 0.0, 0
 
-wandb_login()
-wandb_init(opt, work_dir_exp)
-
-set_seed(42)
-
-device_ids = [Id for Id in range(torch.cuda.device_count())]
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-# --- model --- #
-net = load_model(opt.backbone, opt.pretrain_model_dir, device, device_ids)
-
-net_o = copy.deepcopy(net)
-net_o.eval()
-
-loss_dc = energy_dc_loss()
-optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
-
-# --- dataloader --- #
-crop_size = [opt.crop_size, opt.crop_size]
-
-syn_dataset_name = opt.label_dir.split('/')[-1]
-if syn_dataset_name == 'RESIDE-OTS':
-    syn_dataset = SynTrainData(crop_size, opt.label_dir, 'hazy/part1', 'gt')
-else:
-    syn_dataset = SynTrainData(crop_size, opt.label_dir, 'hazy', 'gt')
-
-train_data_loader = DataLoader(
-                ConcatDataset(
-                    syn_dataset,
-                    RealTrainData_CLAHE(crop_size, opt.unlabel_dir, 'hazy', 'gt_clahe')
-                ),
-                batch_size=opt.train_batch_size,
-                shuffle=False,
-                num_workers=opt.num_workers,
-                drop_last=True)
-
-val_data_loader = DataLoader(
-                SynValData(opt.val_dir, 'hazy', 'gt'),
-                batch_size=opt.val_batch_size,
-                shuffle=False,
-                num_workers=opt.num_workers)
-
-
-best_loss, best_loss_epoch = 9999999.0, 0
-best_score, best_score_epoch = 0.0, 0
-
-for epoch in range(opt.num_epochs):
-    # --- train --- #
-    train_loss, train_DCP_loss, train_BCP_loss, train_CLAHE_loss, train_Rec_loss = 0, 0, 0, 0, 0
-    train_LwF_sky_loss, train_LwF_label_loss, train_LwF_unlabel_loss = 0, 0, 0
-    train_PSNR, train_SSIM = 0, 0
-    
-    start_time = time.time()
-    adjust_learning_rate(optimizer, epoch, category=opt.category) # indoor: decay_step=20 # outdoor: decay_step=10
-    pbar = tqdm(train_data_loader, total=len(train_data_loader), desc=f"[Epoch {epoch+1}] Train")
-    for batch_id, (label_train_data, unlabel_train_data) in enumerate(pbar):
+    for epoch in range(opt.num_epochs):
+        # --- train --- #
+        train_loss, train_DCP_loss, train_BCP_loss, train_CLAHE_loss, train_Rec_loss, train_LwF_loss = 0, 0, 0, 0, 0, 0
+        learning_rate = adjust_learning_rate(wandb, optimizer, epoch, category=opt.category, lr_decay=0.5) # outdoor: decay_step=10
+        wandb.log({'learning_rate':learning_rate}, commit=False)
         
-        label_haze, label_gt = label_train_data
-        unlabel_haze, unlabel_gt = unlabel_train_data
+        pbar = tqdm(train_data_loader, total=len(train_data_loader), desc=f"[Epoch {epoch+1}] Train")
+        start_time = time.time()
+        for b_id, (label_train_data, unlabel_train_data) in enumerate(pbar):
+            
+            label_haze, label_gt = label_train_data
+            unlabel_haze, unlabel_gt = unlabel_train_data
+            label_haze, label_gt = label_haze.to(device), label_gt.to(device)
+            unlabel_haze, unlabel_gt = unlabel_haze.to(device), unlabel_gt.to(device)
+            # print(f'>>> label_haze shape : {label_haze.shape}, label_gt : {label_gt.shape}, unlabel_haze.shape : {unlabel_haze.shape}, unlabel_gt.shape : {unlabel_gt.shape}')
+            # --- viz unlabel data --- #
+            if b_id == 0:
+                train_unlabel_imgs, train_unlabel_clahe = train_unlabel_image_for_viz(unlabel_haze, unlabel_gt)
+                wandb.log({'train_unlabel_hazy_image':train_unlabel_imgs, 'train_unlabel_dehaze_with_clahe_image':train_unlabel_clahe}, commit=False)
+
+            optimizer.zero_grad()
+            net.train()
+            
+            out_label, J_label, T_label, _, _ = net(label_haze)
+            out_label_o, J_label_o, T_label_o, _, _ = net_o(label_haze)
+            out, J, T, A, I = net(unlabel_haze)
+            out_o, J_o, _, _, _ = net_o(unlabel_haze)
+            I2 = T * unlabel_gt + (1 - T) * A
+
+            finetune_out = torch.squeeze(J.clamp(0, 1).cpu())
+            backbone_out = torch.squeeze(J_o.clamp(0, 1).cpu())
+            # I2 shape : torch.Size([6, 3, 256, 256]), out shape : torch.Size([6, 64, 256, 256]), out_o.shape : torch.Size([6, 64, 256, 256])
+            # print(f'>>> I2 shape : {I2.shape}, finetune_out : {finetune_out.shape}, backbone_out.shape : {backbone_out.shape}')
+            # --- viz output --- #
+            if b_id == 0:
+                batch_b_out_imgs, batch_f_out_imgs = val_pred_image_for_viz(finetune_out, backbone_out)
+                wandb.log({'backbone_output':batch_b_out_imgs, 'finetune_output':batch_f_out_imgs}, commit=False)
+
+            # --- losses --- #
+            energy_dc_loss = loss_dc(unlabel_haze, T)
+            bc_loss = bright_channel(unlabel_haze, T)
+            CLAHE_loss = F.smooth_l1_loss(I2, unlabel_haze)
+            rec_loss = F.smooth_l1_loss(I, unlabel_haze)
+            lwf_loss_sky = lwf_sky(unlabel_haze, J, J_o)
+            lwf_loss_label = F.smooth_l1_loss(out_label, out_label_o)
+            lwf_loss_unlabel = F.smooth_l1_loss(out, out_o)
+            
+            total_loss = opt.lambda_dc*energy_dc_loss + opt.lambda_bc*bc_loss + opt.lambda_CLAHE*CLAHE_loss + opt.lambda_rec*rec_loss
+            total_loss += opt.lambda_lwf_sky*lwf_loss_sky + opt.lambda_lwf_label*lwf_loss_label + opt.lambda_lwf_unlabel*lwf_loss_unlabel
+            total_loss.backward()
+            optimizer.step()
+
+            if total_loss != 0 : train_loss += total_loss.item()
+            if energy_dc_loss != 0 : train_DCP_loss += opt.lambda_dc*energy_dc_loss.item()
+            if bc_loss != 0 : train_BCP_loss += opt.lambda_bc*bc_loss.item()
+            if CLAHE_loss != 0 : train_CLAHE_loss += opt.lambda_CLAHE*CLAHE_loss.item()
+            if rec_loss != 0 : train_Rec_loss += opt.lambda_rec*rec_loss.item()
+            if lwf_loss_sky != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_sky.item()
+            if lwf_loss_label != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_label.item()
+            if lwf_loss_unlabel != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_unlabel.item()
+
+            pbar.set_postfix(
+                Total_Loss=f" {train_loss/(b_id+1):.3f}", DCP_Loss=f" {train_DCP_loss/(b_id+1):.3f}", BCP_Loss=f" {train_BCP_loss/(b_id+1):.3f}",
+                CLAHE_Loss=f" {train_CLAHE_loss/(b_id+1):.3f}", Rec_Loss=f" {train_Rec_loss/(b_id+1):.3f}", LwF_Loss=f" {train_LwF_loss/(b_id+1):.3f}",
+                )
         
-        label_haze = label_haze.to(device)
-        label_gt = label_gt.to(device)
-        unlabel_haze = unlabel_haze.to(device)
-        unlabel_gt = unlabel_gt.to(device)
-        # print(f'>>> label_haze shape : {label_haze.shape}, label_gt : {label_gt.shape}, unlabel_haze.shape : {unlabel_haze.shape}, unlabel_gt.shape : {unlabel_gt.shape}')
-        # --- viz --- #
-        if batch_id == 0:
-            batch_train_unlabel_imgs = []
-            batch_train_unlabel_clahe = []
-            for train_unlabel_img, train_unlabel_gt in zip(unlabel_haze, unlabel_gt):
-                train_unlabel_img = train_unlabel_img.permute(1,2,0).cpu().numpy()
-                train_unlabel_gt = train_unlabel_gt.permute(1,2,0).cpu().numpy()
-                batch_train_unlabel_imgs.append(wandb.Image(train_unlabel_img))
-                batch_train_unlabel_clahe.append(wandb.Image(train_unlabel_gt))
-            wandb.log({'train_unlabel_hazy_image':batch_train_unlabel_imgs, 'train_unlabel_dehaze_with_clahe_image':batch_train_unlabel_clahe}, commit=False)
+        run_time = time.time() - start_time
+        wandb.log({'train/total_loss':round(train_loss/(b_id+1),4), 'train/DCP_loss':round(train_DCP_loss/(b_id+1),4), 'train/BCP_loss':round(train_BCP_loss/(b_id+1),4),
+                   'train/CLAHE_loss':round(train_CLAHE_loss/(b_id+1),4), 'train/Rec_loss':round(train_Rec_loss/(b_id+1),4), 'train/LwF_loss':round(train_LwF_loss/(b_id+1),4),
+                   'train_run_time':round(run_time,4),
+                   }, commit=False)
 
-        optimizer.zero_grad()
-        net.train()
-        
-        out_label, J_label, T_label, _, _ = net(label_haze)
-        out_label_o, J_label_o, T_label_o, _, _ = net_o(label_haze)
-        
-        out, J, T, A, I = net(unlabel_haze)
-        out_o, J_o, T_o, _, _ = net_o(unlabel_haze)
-        I2 = T * unlabel_gt + (1 - T) * A
 
-        finetune_out = torch.squeeze(J.clamp(0, 1).cpu())
-        backbone_out = torch.squeeze(J_o.clamp(0, 1).cpu())
-        
-        # I2 shape : torch.Size([6, 3, 256, 256]), out shape : torch.Size([6, 64, 256, 256]), out_o.shape : torch.Size([6, 64, 256, 256])
-        # print(f'>>> I2 shape : {I2.shape}, finetune_out : {finetune_out.shape}, backbone_out.shape : {backbone_out.shape}')
-        if batch_id == 0:
-            batch_b_out_imgs = []
-            batch_f_out_imgs = []
-            for f_out, b_out in zip(finetune_out, backbone_out):
-                batch_b_out = b_out.detach().permute(1,2,0).cpu().numpy()
-                batch_f_out = f_out.detach().permute(1,2,0).cpu().numpy()
-                batch_b_out_imgs.append(wandb.Image(batch_b_out))
-                batch_f_out_imgs.append(wandb.Image(batch_f_out))
-            wandb.log({'backbone_output':batch_b_out_imgs, 'finetune_output':batch_f_out_imgs}, commit=False)
+        # --- evaluation --- #
+        net.eval()
 
-        # --- losses --- #
-        energy_dc_loss = loss_dc(unlabel_haze, T)
-        bc_loss = bright_channel(unlabel_haze, T)
-        CLAHE_loss = F.smooth_l1_loss(I2, unlabel_haze)
-        rec_loss = F.smooth_l1_loss(I, unlabel_haze)
+        val_PSNR, val_SSIM = [], []
+        start_time = time.time()
+        pbar = tqdm(val_data_loader, total=len(val_data_loader), desc=f"[Epoch {epoch+1}] Val")
+        for b_id, val_data in enumerate(pbar):
 
-        lwf_loss_sky = lwf_sky(unlabel_haze, J, J_o)
-        lwf_loss_label = F.smooth_l1_loss(out_label, out_label_o)
-        lwf_loss_unlabel = F.smooth_l1_loss(out, out_o)
+            with torch.no_grad():
+                haze, haze_A, gt, image_name = val_data
+                haze, gt = haze.to(device), gt.to(device)
+                B, _, H, W = haze.shape
 
-        total_loss = opt.lambda_dc*energy_dc_loss + opt.lambda_bc*bc_loss + opt.lambda_CLAHE*CLAHE_loss
-        total_loss += opt.lambda_rec*rec_loss + opt.lambda_lwf_sky*lwf_loss_sky
-        total_loss += opt.lambda_lwf_label*lwf_loss_label + opt.lambda_lwf_unlabel*lwf_loss_unlabel
+                if opt.backbone == 'MSBDNNet':
+                    if haze.size()[2] % 16 != 0 or haze.size()[3] % 16 != 0:
+                        haze = F.upsample(haze, [haze.size()[2] + 16 - haze.size()[2] % 16, haze.size()[3] + 16 - haze.size()[3] % 16], mode='bilinear')
+                    if gt.size()[2] % 16 != 0 or gt.size()[3] % 16 != 0:
+                        gt = F.upsample(gt, [gt.size()[2] + 16 - gt.size()[2] % 16, gt.size()[3] + 16 - gt.size()[3] % 16], mode='bilinear')
+                    out, out_J, out_T, out_A, out_I = net(haze, haze_A, True)
+                else:
+                    out, out_J, out_T, out_A, out_I = net(haze, True)
+            
+                val_PSNR.extend( to_psnr(out_J, gt) )
+                val_SSIM.extend( ssim(out_J, gt) )
+                avg_PSNR = sum(val_PSNR)/len(val_PSNR)
+                avg_SSIM = sum(val_SSIM)/len(val_SSIM)
 
-        wandb.log({'energy_dc_loss':energy_dc_loss, 'bc_loss':bc_loss, 'CLAHE_loss':CLAHE_loss, 'rec_loss':rec_loss,
-                    'lwf_loss_sky':lwf_loss_sky, 'lwf_loss_label':lwf_loss_label, 'lwf_loss_unlabel':lwf_loss_unlabel, 'total_loss':loss,
-                    }, commit=False)
+                # val_PSNR_score = metric_PSNR(out_J, gt).item()
+                # val_SSIM_score = metric_SSIM(out_J, gt).item()
+                val_NIQE_score = metric_NIQE(out_J).item()
+                val_BRISQUE_score = metric_BRISQUE(out_J).item()
+                val_NIMA_score = metric_NIMA(out_J).item()
+                
+            pbar.set_postfix(
+                Val_PSNR=f" {avg_PSNR:.3f}", Val_SSIM=f" {avg_SSIM:.3f}",
+                # Val_PSNR_pyiqa=f" {val_PSNR_score:.3f}", Val_SSIM_pyiqa=f" {val_SSIM_score:.3f}",
+                Val_NIQE=f" {val_NIQE_score:.3f}", Val_BRISQUE=f" {val_BRISQUE_score:.3f}", Val_NIMA=f" {val_NIMA_score:.3f}",
+                )
 
-        loss.backward()
-        optimizer.step()
+            # --- Save image --- #
+            # save_image(out_J, image_name, opt.category)
 
-        train_loss += total_loss
-        train_DCP_loss += energy_dc_loss
-        train_BCP_loss += bc_loss
-        train_CLAHE_loss += CLAHE_loss
-        train_Rec_loss += rec_loss
-        train_LwF_sky_loss += lwf_loss_sky
-        train_LwF_label_loss += lwf_loss_label
-        train_LwF_unlabel_loss += lwf_loss_unlabel
+        run_time = time.time() - start_time
+        wandb.log({
+            'val/PSNR':avg_PSNR, 'val/SSIM':avg_SSIM, 'val_run_time':round(run_time,4),
+            # 'val/PSNR_pyiqa':val_PSNR_score, 'val/SSIM_pyiqa':val_SSIM_score,
+            'val/NIQE':val_NIQE_score, 'val/BRISQUE':val_BRISQUE_score, 'val/NIMA':val_NIMA_score,
+            })
 
-        pbar.set_postfix(
-                Train_Loss=f" {train_loss/(batch_id+1):.3f}",
-            )
+        # --- Save model --- #
+        if best_PSNR < avg_PSNR:
+            best_PSNR, best_PSNR_epoch = avg_PSNR, epoch
+            best_PSNR_path = os.path.join(work_dir_exp, 'best_PSNR.pth')
+            torch.save(net.state_dict(), best_PSNR_path)
+        if best_SSIM < avg_SSIM:
+            best_SSIM, best_SSIM_epoch = avg_SSIM, epoch
+            best_SSIM_path = os.path.join(work_dir_exp, 'best_SSIM.pth')
+            torch.save(net.state_dict(), best_SSIM_path)
+        if epoch == opt.num_epochs:
+            new_best_PSNR_path = best_PSNR_path[:-4] + f"_epoch{best_PSNR_epoch}.pth"
+            new_best_SSIM_path = best_SSIM_path[:-4] + f"_epoch{best_SSIM_epoch}.pth"
+            os.rename(best_PSNR_path, new_best_PSNR_path)
+            os.rename(best_SSIM_path, new_best_SSIM_path)
+            last_epoch_path = os.path.join(work_dir_exp, f'epoch{epoch}.pth')
+            torch.save(net.state_dict(), last_epoch_path)
 
-    # --- save model --- #
-    save_path = os.path.join(work_dir_exp, f'Epoch{epoch}.pth')
-    torch.save(net.state_dict(), save_path)
+    # --- output test images --- #
+    # generate_test_images(net, TestData, opt.num_epochs, (0, opt.num_epochs - 1))
 
-    # --- Use the evaluation model in testing --- #
-    net.eval()
-    
-    val_psnr, val_ssim = validation(net, opt.backbone, val_data_loader, device, opt.category)
-    one_epoch_time = time.time() - start_time
-    wandb.log({'val_psnr':val_psnr, 'val_ssim':val_ssim})
-    print_log(epoch+1, opt.num_epochs, one_epoch_time, train_psnr, val_psnr, val_ssim, opt.category)
 
-# --- output test images --- #
-generate_test_images(net, TestData, opt.num_epochs, (0, opt.num_epochs - 1))
+def main(opt):
+    # --- setup --- #
+    work_dir_exp = increment_path(os.path.join(opt.work_dir, 'exp'))
+    make_directory(work_dir_exp)
+    wandb_init(opt, work_dir_exp)
+
+    device_ids = [Id for Id in range(torch.cuda.device_count())]
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    # --- dataloader --- #
+    crop_size = [opt.crop_size, opt.crop_size]
+
+    train_data_loader = torch.utils.data.DataLoader(
+                    ConcatDataset(
+                        SynTrainData(crop_size, opt.label_dir),
+                        RealTrainData_CLAHE(crop_size, opt.unlabel_dir)
+                    ),
+                    batch_size=opt.train_batch_size,
+                    shuffle=False,
+                    num_workers=opt.num_workers,
+                    drop_last=True)
+    val_data_loader = torch.utils.data.DataLoader(
+                    SynValData(opt.val_dir),
+                    batch_size=opt.val_batch_size,
+                    shuffle=False,
+                    num_workers=opt.num_workers)
+
+    # --- model --- #
+    net = load_model(opt.backbone, opt.pretrain_model_dir, device, device_ids)
+    net_o = copy.deepcopy(net)
+    net_o.eval()
+
+    loss_dc = energy_dc_loss()
+    optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
+    metric_PSNR = pyiqa.create_metric('psnr').to(device)
+    metric_SSIM = pyiqa.create_metric('ssim').to(device)
+    metric_NIQE = pyiqa.create_metric('niqe').to(device)
+    metric_BRISQUE = pyiqa.create_metric('brisque').to(device)
+    metric_NIMA = pyiqa.create_metric('nima').to(device)
+
+    train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, net_o, loss_dc, optimizer,
+          metric_PSNR, metric_SSIM, metric_NIQE, metric_BRISQUE, metric_NIMA)
+
+
+if __name__ == '__main__':
+    wandb_login()
+    set_seed(42)
+    opt = get_parser()
+    main(opt)

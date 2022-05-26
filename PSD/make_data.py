@@ -9,9 +9,6 @@ if __name__ == '__main__':
     folder_list = [
         'Crawling',
         'Hidden',
-        'MRFID',
-        'BeDDE',
-        'RESIDE_RTTS',
     ]
 
     sample_num = 5

@@ -3,14 +3,13 @@ import re
 import time
 import glob
 import random
+import wandb
 import numpy as np
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.utils as utils
-from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 import math
@@ -21,7 +20,7 @@ from models.GCA import GCANet
 from models.FFA import FFANet
 from models.MSBDN import MSBDNNet
 
-from datasets.pretrain_datasets import *
+from datasets.pretrain_datasets import TestData
 
 
 def get_dark_channel(I, w):
@@ -130,8 +129,6 @@ def validation(net, net_name, val_data_loader, device, category, save_tag=False)
         # --- Save image --- #
         if save_tag:
             save_image(out_J, image_name, category)
-        if batch_id % 20 == 0:
-            print('Batch_id:', batch_id)
 
     avr_psnr = sum(psnr_list) / len(psnr_list)
     avr_ssim = sum(ssim_list) / len(ssim_list)
@@ -143,21 +140,20 @@ def save_image(dehaze, image_name, category):
     batch_num = len(dehaze_images)
 
     for ind in range(batch_num):
-        utils.save_image(dehaze_images[ind], './{}_results/{}'.format(category, image_name[ind][:-3] + 'png'))
+        torchvision.utils.save_image(dehaze_images[ind], './{}_results/{}'.format(category, image_name[ind][:-3] + 'png'))
 
 
 def print_log(epoch, num_epochs, one_epoch_time, train_psnr, val_psnr, val_ssim, category):
     print('({0:.0f}s) Epoch [{1}/{2}], Train_PSNR:{3:.2f}, Val_PSNR:{4:.2f}, Val_SSIM:{5:.4f}'
           .format(one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim))
 
-    --- Write the training log --- #
     with open('/output/{}_log.txt'.format(category), 'a') as f:
         print('Date: {0}s, Time_Cost: {1:.0f}s, Epoch: [{2}/{3}], Train_PSNR: {4:.2f}, Val_PSNR: {5:.2f}, Val_SSIM: {6:.4f}'
               .format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                       one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim), file=f)
 
 
-def adjust_learning_rate(optimizer, epoch, category, lr_decay=0.5):
+def adjust_learning_rate(wandb, optimizer, epoch, category, lr_decay=0.5):
 
     # --- Decay learning rate --- #
     step = 20 if category == 'indoor' else 10
@@ -165,10 +161,10 @@ def adjust_learning_rate(optimizer, epoch, category, lr_decay=0.5):
     if not epoch % step and epoch > 0:
         for param_group in optimizer.param_groups:
             param_group['lr'] *= lr_decay
-            print('Learning rate sets to {}.'.format(param_group['lr']))
+            return param_group['lr']
     else:
         for param_group in optimizer.param_groups:
-            print('Learning rate sets to {}.'.format(param_group['lr']))
+            return param_group['lr']
             
 
 def edge_compute(x):
@@ -190,7 +186,7 @@ def generate_test_images(net, TestData, num_epochs, chosen_epoch):
     epoch = 0
     net.eval()
     test_data_dir = '/data/nnice1216/unlabeled1/'
-    test_data_loader = DataLoader(TestData(test_data_dir), batch_size=1, shuffle=False, num_workers=8)
+    test_data_loader = torch.utils.data.DataLoader(TestData(test_data_dir), batch_size=1, shuffle=False, num_workers=8)
 
     with torch.no_grad():
         for epoch in range(num_epochs):
@@ -281,3 +277,27 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)  # if use multi-GPU
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+def train_unlabel_image_for_viz(unlabel_haze, unlabel_gt):
+    train_unlabel_imgs = []
+    train_unlabel_clahe = []
+    for train_unlabel_img, train_unlabel_gt in zip(unlabel_haze, unlabel_gt):
+        train_unlabel_img = train_unlabel_img.permute(1,2,0).cpu().numpy()
+        train_unlabel_gt = train_unlabel_gt.permute(1,2,0).cpu().numpy()
+        train_unlabel_imgs.append(wandb.Image(train_unlabel_img))
+        train_unlabel_clahe.append(wandb.Image(train_unlabel_gt))
+    
+    return train_unlabel_imgs, train_unlabel_clahe
+
+
+def val_pred_image_for_viz(finetune_out, backbone_out):
+    batch_b_out_imgs = []
+    batch_f_out_imgs = []
+    for f_out, b_out in zip(finetune_out, backbone_out):
+        batch_b_out = b_out.detach().permute(1,2,0).cpu().numpy()
+        batch_f_out = f_out.detach().permute(1,2,0).cpu().numpy()
+        batch_b_out_imgs.append(wandb.Image(batch_b_out))
+        batch_f_out_imgs.append(wandb.Image(batch_f_out))
+    
+    return batch_b_out_imgs, batch_f_out_imgs

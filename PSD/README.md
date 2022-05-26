@@ -4,7 +4,21 @@
 python==3.8.5 <br>
 torch==1.7.1 <br>
 torchvision==0.8.2 <br>
-cuda==11.0
+cuda==11.0 <br>
+
+pyiqa를 쓰실 경우,
+torch==1.8.1 <br>
+torchvision==0.9.1 <br>
+cuda==10.2 <br>
+
+```
+conda create -n pyiqa python=3.8.5
+conda activate pyiqa
+conda config --append channels trenta3
+conda install cudatoolkit=10.2 -c trenta3
+conda install cudatoolkit-dev=10.2 -c trenta3
+conda install pytorch==1.8.1 torchvision==0.9.1 torchaudio==0.8.1 cudatoolkit=10.2 -c pytorch
+```
 
 ### 1. Directory
 data, pretraind_model은 아래처럼 구성해놓았습니다.
@@ -59,3 +73,14 @@ ETCDataset : Test dataset (hazy) <br>
 
 ### 4. wandb_setup_sharing.py
 이전 대회와 동일하게 해당 파일을 복사한 후에 wandb_setup.py로 이름을 바꿔주시고, api_key와 project_name 넣어주시면 됩니다.
+
+### 5. pyiqa
+아래 코드는 공식 github 내용입니다.
+requirements.txt에 있는 torch와 torchvision을 지워주셔야 합니다.
+
+```
+git clone https://github.com/chaofengc/IQA-PyTorch.git
+cd IQA-PyTorch
+pip install -r requirements.txt
+python setup.py develop
+```
