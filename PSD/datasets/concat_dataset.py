@@ -1,12 +1,7 @@
-import torch.utils.data as data
-import os
-from PIL import Image
-from random import randrange
-import numpy as np
-from torchvision.transforms import Compose, ToTensor, Normalize
+import torch
 
 
-class ConcatDataset(data.Dataset):
+class ConcatDataset(torch.utils.data.Dataset):
 
     def __init__(self, dataloader_syn, dataloader_real):
 
@@ -20,7 +15,7 @@ class ConcatDataset(data.Dataset):
         return min(len(d) for d in self.datasets)
     
     
-class ConcatDataset3(data.Dataset):
+class ConcatDataset3(torch.utils.data.Dataset):
 
     def __init__(self, dataloader_syn, dataloader_ITS, dataloader_real):
 
