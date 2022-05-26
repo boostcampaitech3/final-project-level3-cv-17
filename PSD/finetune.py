@@ -118,9 +118,9 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
                 )
         
         run_time = time.time() - start_time
-        wandb.log({'train/total_loss':round(train_loss/(b_id+1),4), 'train/DCP_loss':round(train_DCP_loss/(b_id+1),4), 'train/BCP_loss':round(train_BCP_loss/(b_id+1),4),
-                   'train/CLAHE_loss':round(train_CLAHE_loss/(b_id+1),4), 'train/Rec_loss':round(train_Rec_loss/(b_id+1),4), 'train/LwF_loss':round(train_LwF_loss/(b_id+1),4),
-                   'train_run_time':round(run_time,4),
+        wandb.log({'train/total_loss':train_loss/(b_id+1), 'train/DCP_loss':train_DCP_loss/(b_id+1), 'train/BCP_loss':train_BCP_loss/(b_id+1),
+                   'train/CLAHE_loss':train_CLAHE_loss/(b_id+1), 'train/Rec_loss':train_Rec_loss/(b_id+1), 'train/LwF_loss':train_LwF_loss/(b_id+1),
+                   'train_run_time':run_time,
                    }, commit=False)
 
 
@@ -168,7 +168,7 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
 
         run_time = time.time() - start_time
         wandb.log({
-            'val/PSNR':avg_PSNR, 'val/SSIM':avg_SSIM, 'val_run_time':round(run_time,4),
+            'val/PSNR':avg_PSNR, 'val/SSIM':avg_SSIM, 'val_run_time':run_time,
             # 'val/PSNR_pyiqa':val_PSNR_score, 'val/SSIM_pyiqa':val_SSIM_score,
             'val/NIQE':val_NIQE_score, 'val/BRISQUE':val_BRISQUE_score, 'val/NIMA':val_NIMA_score,
             })
