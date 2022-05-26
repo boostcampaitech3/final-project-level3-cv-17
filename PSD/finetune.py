@@ -21,9 +21,9 @@ def get_parser():
     parser.add_argument('--backbone', type=str, default='MSBDNNet', help='Backbone model(GCANet/FFANet/MSBDNNet)')
     parser.add_argument('--category', type=str, default='outdoor', help='dataset type: indoor / outdoor') # outdoor only
 
-    parser.add_argument('--lr', type=float, default=0.00001)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--num_epochs', type=int, default=20)
-    parser.add_argument('--train_batch_size', type=int, default=6)
+    parser.add_argument('--train_batch_size', type=int, default=8)
     parser.add_argument('--val_batch_size', type=int, default=1) # do not change
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--crop_size', type=int, default=256, help='size of random crop')
@@ -31,11 +31,11 @@ def get_parser():
     parser.add_argument('--work_dir', type=str, default='/opt/ml/final-project-level3-cv-17/PSD/work_dirs')
     parser.add_argument('--label_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/MRFID')
     parser.add_argument('--unlabel_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/RESIDE_RTTS')
-    parser.add_argument('--val_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/BeDDE')
+    parser.add_argument('--val_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/RESIDE_SOTS_OUT')
     parser.add_argument('--pretrain_model_dir', type=str, default='/opt/ml/final-project-level3-cv-17/PSD/pretrained_model')
 
-    parser.add_argument('--lambda_dc', type=float, default=2e-3)
-    parser.add_argument('--lambda_bc', type=float, default=3e-2)
+    parser.add_argument('--lambda_dc', type=float, default=1e-3)
+    parser.add_argument('--lambda_bc', type=float, default=0.05)
     parser.add_argument('--lambda_CLAHE', type=float, default=1)
     parser.add_argument('--lambda_rec', type=float, default=1)
     parser.add_argument('--lambda_lwf_label', type=float, default=1)
@@ -128,6 +128,7 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
         net.eval()
 
         val_PSNR, val_SSIM = [], []
+        val_PSNR_score, val_SSIM_score, val_NIQE_score, val_BRISQUE_score, val_NIMA_score = 0, 0, 0, 0, 0
         start_time = time.time()
         pbar = tqdm(val_data_loader, total=len(val_data_loader), desc=f"[Epoch {epoch+1}] Val")
         for b_id, val_data in enumerate(pbar):
@@ -148,19 +149,19 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             
                 val_PSNR.extend( to_psnr(out_J, gt) )
                 val_SSIM.extend( ssim(out_J, gt) )
+                # val_PSNR_score += metric_PSNR(out_J, gt).item()
+                # val_SSIM_score += metric_SSIM(out_J, gt).item()
+                val_NIQE_score += metric_NIQE(out_J).item()
+                val_BRISQUE_score += metric_BRISQUE(out_J).item()
+                val_NIMA_score += metric_NIMA(out_J).item()
+
                 avg_PSNR = sum(val_PSNR)/len(val_PSNR)
                 avg_SSIM = sum(val_SSIM)/len(val_SSIM)
-
-                # val_PSNR_score = metric_PSNR(out_J, gt).item()
-                # val_SSIM_score = metric_SSIM(out_J, gt).item()
-                val_NIQE_score = metric_NIQE(out_J).item()
-                val_BRISQUE_score = metric_BRISQUE(out_J).item()
-                val_NIMA_score = metric_NIMA(out_J).item()
                 
             pbar.set_postfix(
                 Val_PSNR=f" {avg_PSNR:.3f}", Val_SSIM=f" {avg_SSIM:.3f}",
-                # Val_PSNR_pyiqa=f" {val_PSNR_score:.3f}", Val_SSIM_pyiqa=f" {val_SSIM_score:.3f}",
-                Val_NIQE=f" {val_NIQE_score:.3f}", Val_BRISQUE=f" {val_BRISQUE_score:.3f}", Val_NIMA=f" {val_NIMA_score:.3f}",
+                # Val_PSNR_pyiqa=f" {val_PSNR_score/(b_id+1):.3f}", Val_SSIM_pyiqa=f" {val_SSIM_score/(b_id+1):.3f}",
+                Val_NIQE=f" {val_NIQE_score/(b_id+1):.3f}", Val_BRISQUE=f" {val_BRISQUE_score/(b_id+1):.3f}", Val_NIMA=f" {val_NIMA_score/(b_id+1):.3f}",
                 )
 
             # --- Save image --- #
@@ -169,8 +170,8 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
         run_time = time.time() - start_time
         wandb.log({
             'val/PSNR':avg_PSNR, 'val/SSIM':avg_SSIM, 'val_run_time':run_time,
-            # 'val/PSNR_pyiqa':val_PSNR_score, 'val/SSIM_pyiqa':val_SSIM_score,
-            'val/NIQE':val_NIQE_score, 'val/BRISQUE':val_BRISQUE_score, 'val/NIMA':val_NIMA_score,
+            # 'val/PSNR_pyiqa':val_PSNR_score/(b_id+1), 'val/SSIM_pyiqa':val_SSIM_score/(b_id+1),
+            'val/NIQE':val_NIQE_score/(b_id+1), 'val/BRISQUE':val_BRISQUE_score/(b_id+1), 'val/NIMA':val_NIMA_score/(b_id+1),
             })
 
         # --- Save model --- #
@@ -214,12 +215,15 @@ def main(opt):
                     batch_size=opt.train_batch_size,
                     shuffle=False,
                     num_workers=opt.num_workers,
+                    pin_memory=True,
                     drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(
                     SynValData(opt.val_dir),
                     batch_size=opt.val_batch_size,
                     shuffle=False,
-                    num_workers=opt.num_workers)
+                    num_workers=opt.num_workers,
+                    pin_memory=True,
+                    )
 
     # --- model --- #
     net = load_model(opt.backbone, opt.pretrain_model_dir, device, device_ids)
