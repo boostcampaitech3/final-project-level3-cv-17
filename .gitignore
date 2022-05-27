@@ -1,0 +1,14 @@
+data/skyseg/
+SkyReplacement/Replacement/__pycache__/
+SkyReplacement/SkySegmentation/__pycache__/
+SkyReplacement/SkySegmentation/mmsegmentation/
+SkyReplacement/SkySegmentation/mmseg_config/__pycache__/
+SkyReplacement/SkySegmentation/mmseg_config/wandb/
+SkyReplacement/SkySegmentation/mmseg_config/work_dirs/
+SkyReplacement/SkySegmentation/mmseg_config/pretrain/
+SkyReplacement/SkySegmentation/mmseg_config/test.ipynb
+SkyReplacement/SkySegmentation/checkpoint/epoch_34.pth
+
+
+
+
