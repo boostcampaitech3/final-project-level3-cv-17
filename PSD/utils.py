@@ -281,17 +281,17 @@ def set_seed(seed):
 
 def train_unlabel_image_for_viz(unlabel_haze, unlabel_gt):
     train_unlabel_imgs = []
-    train_unlabel_clahe = []
+    train_unlabel_gts = []
     for train_unlabel_img, train_unlabel_gt in zip(unlabel_haze, unlabel_gt):
         train_unlabel_img = train_unlabel_img.permute(1,2,0).cpu().numpy()
         train_unlabel_gt = train_unlabel_gt.permute(1,2,0).cpu().numpy()
         train_unlabel_imgs.append(wandb.Image(train_unlabel_img))
-        train_unlabel_clahe.append(wandb.Image(train_unlabel_gt))
+        train_unlabel_gts.append(wandb.Image(train_unlabel_gt))
     
-    return train_unlabel_imgs, train_unlabel_clahe
+    return train_unlabel_imgs, train_unlabel_gts
 
 
-def val_pred_image_for_viz(finetune_out, backbone_out):
+def train_pred_image_for_viz(finetune_out, backbone_out):
     batch_b_out_imgs = []
     batch_f_out_imgs = []
     for f_out, b_out in zip(finetune_out, backbone_out):

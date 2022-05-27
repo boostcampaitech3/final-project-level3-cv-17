@@ -8,7 +8,20 @@ import torch
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 
-class SynTrainData(torch.utils.data.Dataset):
+def correct_gt_name(data_name, gt_name):
+    if data_name == 'RESIDE-OTS':
+        gt_name = gt_name.split('_')[0] + '.jpg'
+    elif data_name == 'BeDDE':
+        gt_name = gt_name.split('_')[0] + '_clear.png'
+    elif data_name == 'MRFID':
+        gt_name = gt_name[:-5] + '0.jpg'
+    elif data_name == 'O_HAZE':
+        gt_name = gt_name[:-6] + 'GT' + gt_name[-4:]
+    
+    return gt_name
+
+
+class TrainData_label(torch.utils.data.Dataset):
     def __init__(self, crop_size, train_data_dir):
         super().__init__()
 
@@ -31,16 +44,7 @@ class SynTrainData(torch.utils.data.Dataset):
         haze_name = os.path.join(self.haze_dir,haze_name)
         
         gt_name = haze_name.replace(self.haze_folder, self.gt_folder)
-        if self.data_name == 'RESIDE-OTS':
-            gt_name = gt_name.split('_')[0] + '.jpg'
-        elif self.data_name == 'BeDDE':
-            gt_name = gt_name.split('_')[0] + '_clear.png'
-        elif self.data_name == 'MRFID':
-            gt_name = gt_name[:-5] + '0.jpg'
-        elif self.data_name == 'NH_HAZE':
-            gt_name = haze_name.replace(self.haze_folder, self.gt_folder)
-        elif self.data_name == 'O_HAZE':
-            gt_name = haze_name.replace(self.haze_folder, 'GT')
+        gt_name = correct_gt_name(self.data_name, gt_name)
 
         haze_img = Image.open(haze_name).convert('RGB')
         gt_img = Image.open(gt_name).convert('RGB')
@@ -74,14 +78,14 @@ class SynTrainData(torch.utils.data.Dataset):
         return len(self.haze_names)
 
 
-class RealTrainData_CLAHE(torch.utils.data.Dataset):
+class TrainData_unlabel(torch.utils.data.Dataset):
     # Hidden
     # RESIDE_RTTS
-    def __init__(self, crop_size, train_data_dir):
+    def __init__(self, crop_size, train_data_dir, gt_type):
         super().__init__()
         self.data_name = train_data_dir.split('/')[-1]
         self.haze_folder = 'hazy'
-        self.gt_folder = 'gt_clahe'
+        self.gt_folder = gt_type
 
         self.haze_dir = os.path.join(train_data_dir, self.haze_folder)
         self.gt_dir = os.path.join(train_data_dir, self.gt_folder)
@@ -128,7 +132,7 @@ class RealTrainData_CLAHE(torch.utils.data.Dataset):
         return len(self.haze_names)
 
 
-class SynValData(torch.utils.data.Dataset):
+class ValData_label(torch.utils.data.Dataset):
     def __init__(self, val_data_dir):
         super().__init__()
 
@@ -147,16 +151,7 @@ class SynValData(torch.utils.data.Dataset):
     def get_images(self, index):
         haze_name = self.haze_names[index]
         gt_name = haze_name.replace(self.haze_folder, self.gt_folder)
-        if self.data_name == 'RESIDE-OTS':
-            gt_name = gt_name.split('_')[0] + '.jpg'
-        elif self.data_name == 'BeDDE':
-            gt_name = gt_name.split('_')[0] + '_clear.png'
-        elif self.data_name == 'MRFID':
-            gt_name = gt_name[:-5] + '0.jpg'
-        elif self.data_name == 'NH_HAZE':
-            gt_name = haze_name.replace(self.haze_folder, self.gt_folder)
-        elif self.data_name == 'O_HAZE':
-            gt_name = haze_name.replace(self.haze_folder, 'GT')
+        gt_name = correct_gt_name(self.data_name, gt_name)
         
         haze_img = Image.open(os.path.join(self.haze_dir,haze_name)).convert('RGB')
         gt_img = Image.open(os.path.join(self.gt_dir,gt_name)).convert('RGB')
