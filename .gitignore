@@ -8,7 +8,7 @@ SkyReplacement/SkySegmentation/mmseg_config/work_dirs/
 SkyReplacement/SkySegmentation/mmseg_config/pretrain/
 SkyReplacement/SkySegmentation/mmseg_config/test.ipynb
 SkyReplacement/SkySegmentation/checkpoint/epoch_34.pth
-
-
-
-
+SkyReplacement/SkySegmentation/mmseg_config/configs/_base_/upernet_swin_base_patch4_window7_512x512_160k_ade20k_pretrain_224x224_22K_20210526_211650-762e2178.pth
+SkyReplacement/Replacement/SkySelection/__pycache__/
+data/sky_images/database/img/*
+data/sky_images/database/mask/*

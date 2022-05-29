@@ -4,13 +4,24 @@ import argparse
 import time
 import time
 import cv2
+import sys
+sys.path.append('/opt/ml/input/final-project-level3-cv-17/SkyReplacement/Replacement/SkySelection')
 from Replacement import replace
+from Replacement.SkySelection import skyselect as select
 from mmseg.apis import inference_segmentor, init_segmentor
 import numpy as np
 from mmseg.models import build_segmentor
 from mmcv.runner import load_checkpoint
-
 import mmcv
+
+# 오류가 나는 이유를 생각해보면 결국 코드를 가져오는 것이기 때문이다.
+# 여기에 spatial 모듈을 이 디렉토리에서 찾으면 일단 없고
+# 따로 PYTHON PTAH에 넣어놓은 것도 아니고
+# 설치 의존적 패키지도 아니니까 오류나는게 어떻게 보면 당연하다
+# 따라서 파이썬 프로젝트 코드 작성시 보통 어떻게 하는지 궁그맿서 찾아봤는데
+# 2번같이 해서 혹은 setup을 해서 어디서든 갖올 수 있게 해두면 된다.
+SKY_IMAGES_PATH = '/opt/ml/input/final-project-level3-cv-17/data/sky_images/database/img/*'
+
 
 if __name__ =="__main__":
     parser = argparse.ArgumentParser(
@@ -28,7 +39,7 @@ if __name__ =="__main__":
     args =  parser.parse_args()
 
     img=cv2.cvtColor(cv2.imread(args.image_path,1), cv2.COLOR_BGR2RGB)
-    sky=cv2.cvtColor(cv2.imread(args.sky_path,1), cv2.COLOR_BGR2RGB)
+    # sky=cv2.cvtColor(cv2.imread(args.sky_path,1), cv2.COLOR_BGR2RGB)
 
     start_time = time.time()        
 
@@ -52,11 +63,33 @@ if __name__ =="__main__":
     # filter based
     else:
         sky_mask = process_image_or_folder(args)
+        print(sky_mask.shape)
+        print(type(sky_mask))
     
     sz=img.shape
 
+    # 직접 마스크 지정
+    # import pickle
+    # with open('/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/mmseg_config/mask.pkl', 'rb') as f:
+    #     sky_mask = pickle.load(f)
+    # print(sky_mask.shape)
+    # print(type(sky_mask))
+    # sky_mask = sky_mask.astype(np.uint8) 
+
+    # select the sky
+    if args.sky_path:
+        sky_path = args.sky_path
+    else:
+        sky_path = select.select_sky(args.image_path, SKY_IMAGES_PATH, sky_mask)
+
+    print(sky_path)
+    sky=cv2.cvtColor(cv2.imread(sky_path,1), cv2.COLOR_BGR2RGB)
+    mask_path = sky_path.replace('img','mask')
+    ref_mask = cv2.imread(mask_path,0)
+    # 여기 어딘가에서 resize가 필요함
+
     # replace the sky
-    I_rep=replace.replace_sky(img,sky_mask,sky)
+    I_rep=replace.replace_sky(img,sky_mask,sky,ref_mask)
 
     # color transfer
     transfer = replace.color_transfer(sky,sky_mask,I_rep,1)

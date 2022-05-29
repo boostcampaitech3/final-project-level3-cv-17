@@ -1,8 +1,16 @@
 import numpy as np
 import cv2
 
+def find_min_sky_rect(sky_mask):
+    for index,i in enumerate(sky_mask):
+        if sky_mask.shape[1] > len(np.where(i!=0)[0]):
+            y_max = index
+            break
 
-def find_sky_rect(mask):
+    x_max = sky_mask.shape[1]    
+    return (y_max,x_max,0,0)
+
+def find_max_sky_rect(mask):
 	
 
 	index=np.where(mask!=0)
@@ -16,21 +24,28 @@ def find_sky_rect(mask):
 	
 	return (r1,c1,r2,c2)
 
-def replace_sky(img,mask_bw,sky):
-	
-	r1,c1,r2,c2=find_sky_rect(mask_bw)
-
+def replace_sky(img,img_mask,ref,ref_mask):
+	#sky min rect를 resize하면 되는건데 여기서
+	# 이게 맞나..?
+	# 지금 들어가는 sky대신에 sky region이 들어갈건데
+	# 여기 기준이 지금 1. min rect 2. max rect 인거임.
+	# max rect를 resize한 다음에 x min rect를 하는게 맞긴하다.
+	y2,x2,y1,x1=find_min_sky_rect(ref_mask)
+	roi = ref[y1:y2, x1:x2]
+	r1,c1,r2,c2=find_max_sky_rect(img_mask)
 	height=r1-r2+1
 	width=c1-c2+1
 
-	sky_resize = cv2.resize(sky, (width, height))
+	sky_resize = cv2.resize(roi, (width, height))
+	print(sky_resize.shape)
+	print(img.shape)
 
 	I_rep=img.copy()
 	sz=img.shape
 
 	for i in range(sz[0]):
 			for j in range(sz[1]):
-				if(mask_bw[i,j].any()):
+				if(img_mask[i,j].any()):
 					I_rep[i,j,:] = sky_resize[i-r2,j-c2,:]
 	return I_rep
 
