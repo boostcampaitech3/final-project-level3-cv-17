@@ -6,13 +6,13 @@ from utils import make_directory
 if __name__ == '__main__':
 
     data_list = [
-        # 'Crawling',
+        'Crawling',
         # 'Hidden',
-        'RESIDE_RTTS',
+        # 'RESIDE_RTTS',
         ]
 
     clip_limit = 2
-    grid_size = 16
+    grid_size = 64
     folder_name = f'/gt_clahe_{clip_limit}_{grid_size}'
 
     for data_name in data_list:
@@ -20,7 +20,7 @@ if __name__ == '__main__':
         data_path = '/opt/ml/final-project-level3-cv-17/data/' + data_name +'/hazy'
         out_path = '/opt/ml/final-project-level3-cv-17/data/' + data_name + folder_name
         make_directory(out_path)
-        name_list = list(os.walk(data_path))[0][2]
+        name_list = sorted(list(os.walk(data_path))[0][2])
         for i, name in enumerate(name_list):
             img = cv2.imread(os.path.join(data_path,name))
             b,g,r = cv2.split(img)

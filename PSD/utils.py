@@ -153,12 +153,9 @@ def print_log(epoch, num_epochs, one_epoch_time, train_psnr, val_psnr, val_ssim,
                       one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim), file=f)
 
 
-def adjust_learning_rate(wandb, optimizer, epoch, category, lr_decay=0.5):
+def adjust_learning_rate(wandb, optimizer, epoch, category, decay_step, lr_decay):
 
-    # --- Decay learning rate --- #
-    step = 20 if category == 'indoor' else 10
-
-    if not epoch % step and epoch > 0:
+    if not (epoch+1) % decay_step:
         for param_group in optimizer.param_groups:
             param_group['lr'] *= lr_decay
             return param_group['lr']
@@ -301,3 +298,23 @@ def train_pred_image_for_viz(finetune_out, backbone_out):
         batch_f_out_imgs.append(wandb.Image(batch_f_out))
     
     return batch_b_out_imgs, batch_f_out_imgs
+
+
+def update_best_info(best_path, best_score, best_epoch, val_score, val_epoch, metric, minmax, work_dir_exp, net):
+    if minmax == 'max':
+        if best_score < val_score:
+            best_score, best_epoch = val_score, val_epoch+1
+            best_path = os.path.join(work_dir_exp, f'best_{metric}.pth')
+            torch.save(net.state_dict(), best_path)
+    elif minmax == 'min':
+        if best_score > val_score:
+            best_score, best_epoch = val_score, val_epoch+1
+            best_path = os.path.join(work_dir_exp, f'best_{metric}.pth')
+            torch.save(net.state_dict(), best_path)
+    
+    return best_path, best_score, best_epoch
+
+
+def update_save_epoch(best_path, best_epoch):
+    new_best_path = best_path[:-4] + f"_epoch{best_epoch}.pth"
+    os.rename(best_path, new_best_path)
