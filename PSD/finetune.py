@@ -20,8 +20,8 @@ def get_parser():
 
     parser.add_argument('--backbone', type=str, default='MSBDNNet', help='Backbone model(GCANet/FFANet/MSBDNNet)')
     parser.add_argument('--category', type=str, default='outdoor', help='dataset type: indoor / outdoor') # only outdoor
-    parser.add_argument('--work_dir', type=str, default='/opt/ml/final-project-level3-cv-17/PSD/work_dirs')
-    parser.add_argument('--pretrain_model_dir', type=str, default='/opt/ml/final-project-level3-cv-17/PSD/pretrained_model')
+    parser.add_argument('--work_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/PSD/work_dirs')
+    parser.add_argument('--pretrain_model_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model')
     parser.add_argument('--train_batch_size', type=int, default=8)
     parser.add_argument('--val_batch_size', type=int, default=1) # do not change
     parser.add_argument('--num_workers', type=int, default=8)
@@ -31,14 +31,14 @@ def get_parser():
     parser.add_argument('--not_train', action='store_true', default=False, help='only do valid process')
     parser.add_argument('--not_valid', action='store_true', default=False, help='only do train process')
 
-    parser.add_argument('--label_dir', type=str, nargs='+', default=[#'/opt/ml/final-project-level3-cv-17/data/O_HAZE',
-                                                                     #'/opt/ml/final-project-level3-cv-17/data/NH_HAZE',
-                                                                     '/opt/ml/final-project-level3-cv-17/data/MRFID',
-                                                                     '/opt/ml/final-project-level3-cv-17/data/BeDDE',])
-    parser.add_argument('--unlabel_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/RESIDE_RTTS')
-    parser.add_argument('--val_dir', type=str, default='/opt/ml/final-project-level3-cv-17/data/RESIDE_SOTS_OUT')
+    parser.add_argument('--label_dir', type=str, nargs='+', default=[#'/opt/ml/input/final-project-level3-cv-17/data/O_HAZE',
+                                                                     #'/opt/ml/input/final-project-level3-cv-17/data/NH_HAZE',
+                                                                     '/opt/ml/input/final-project-level3-cv-17/data/MRFID',
+                                                                     '/opt/ml/input/final-project-level3-cv-17/data/BeDDE',])
+    parser.add_argument('--unlabel_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/data/RESIDE_RTTS')
+    parser.add_argument('--val_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/data/RESIDE_SOTS_OUT')
     
-    parser.add_argument('--unlabel_gt_type', type=str, default='', help='unlabel data gt folder name')
+    parser.add_argument('--unlabel_gt_type', type=str, default='gt_clahe_1_64', help='unlabel data gt folder name')
     parser.add_argument('--unlabel_index_dir', type=str, default='', help='directory of unlabel data index list')
     parser.add_argument('--concat_return_max', action='store_true', default=False, help='repeat data or not in ConcatDatasat')
 

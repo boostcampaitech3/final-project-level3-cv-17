@@ -233,7 +233,7 @@ class ETCDataset(torch.utils.data.Dataset):
 
 if __name__=='__main__':
     
-    test_data_dir = '/opt/ml/final-project-level3-cv-17/data/RESIDE_SOTS_OUT/hazy'
+    test_data_dir = '/opt/ml/input/final-project-level3-cv-17/data/RESIDE_SOTS_OUT/hazy'
     test_data_loader = torch.utils.data.DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
     
     for i, data in enumerate(test_data_loader):

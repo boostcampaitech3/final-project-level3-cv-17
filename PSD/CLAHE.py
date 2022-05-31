@@ -17,8 +17,8 @@ if __name__ == '__main__':
 
     for data_name in data_list:
 
-        data_path = '/opt/ml/final-project-level3-cv-17/data/' + data_name +'/hazy'
-        out_path = '/opt/ml/final-project-level3-cv-17/data/' + data_name + folder_name
+        data_path = '/opt/ml/input/final-project-level3-cv-17/data/' + data_name +'/hazy'
+        out_path = '/opt/ml/input/final-project-level3-cv-17/data/' + data_name + folder_name
         make_directory(out_path)
         name_list = sorted(list(os.walk(data_path))[0][2])
         for i, name in enumerate(name_list):
