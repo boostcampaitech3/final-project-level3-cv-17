@@ -4,6 +4,10 @@ PSD/models/__pycache__
 
 PSD/output/
 
+SkyReplacement/Replacement/__pycache__
+SkyReplacement/SkySegmentation/__pycache__
+SkyReplacement/SkySegmentation/mmseg_config/__pycache__
+SkyReplacement/SkySegmentation/checkpoint/epoch_34.pth
 
 PSD/pretrained_model/PSD-FFANET
 PSD/pretrained_model/PSD-GCANET
