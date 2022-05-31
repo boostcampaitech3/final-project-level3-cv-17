@@ -12,6 +12,8 @@ import os
 import glob
 import argparse
 import time
+import imutils
+
 
 
 #Function Define Start
@@ -402,6 +404,13 @@ def process_image_or_folder(args_received):
         start_time = time.time() # record start time for current image
         current_image_name = os.path.basename(image_path)
         current_image = cv2.imread(image_path,1)
+
+        height, width = current_image.shape[:2]
+        if height >= width:
+            current_image = imutils.resize(current_image,height=1280) 
+        else:
+            current_image = imutils.resize(current_image,width=1280) 
+
         M, N, _ = current_image.shape
         sky_mask = find_sky_mask(current_image)
         

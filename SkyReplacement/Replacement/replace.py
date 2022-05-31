@@ -2,13 +2,13 @@ import numpy as np
 import cv2
 
 def find_min_sky_rect(sky_mask):
+    x_max = sky_mask.shape[1]
     for index,i in enumerate(sky_mask):
         if sky_mask.shape[1] > len(np.where(i!=0)[0]):
-            y_max = index
             break
+    y_max = index
+    return y_max,x_max,0,0
 
-    x_max = sky_mask.shape[1]    
-    return (y_max,x_max,0,0)
 
 def find_max_sky_rect(mask):
 	
@@ -17,37 +17,52 @@ def find_max_sky_rect(mask):
 	index= np.array(index,dtype=int)
 	y=index[0,:]
 	x=index[1,:]
+	# 추출된 이미지의 mask가 전부 00이 될 경우
+	# 1.png의 경우 filter base로 추출하면 전부 0이 나옴.
+	# 그럴 경우 오류 발생
 	c2=np.min(x)
 	c1=np.max(x)
 	r2=np.min(y)
 	r1=np.max(y)
-	
+	print((r1,c1,r2,c2))
 	return (r1,c1,r2,c2)
-
 def replace_sky(img,img_mask,ref,ref_mask):
-	#sky min rect를 resize하면 되는건데 여기서
-	# 이게 맞나..?
-	# 지금 들어가는 sky대신에 sky region이 들어갈건데
-	# 여기 기준이 지금 1. min rect 2. max rect 인거임.
-	# max rect를 resize한 다음에 x min rect를 하는게 맞긴하다.
-	y2,x2,y1,x1=find_min_sky_rect(ref_mask)
-	roi = ref[y1:y2, x1:x2]
-	r1,c1,r2,c2=find_max_sky_rect(img_mask)
-	height=r1-r2+1
-	width=c1-c2+1
 
-	sky_resize = cv2.resize(roi, (width, height))
-	print(sky_resize.shape)
-	print(img.shape)
+	height, width = img_mask.shape
+
+	sky_resize = cv2.resize(ref, (width, height))
 
 	I_rep=img.copy()
 	sz=img.shape
 
 	for i in range(sz[0]):
-			for j in range(sz[1]):
-				if(img_mask[i,j].any()):
-					I_rep[i,j,:] = sky_resize[i-r2,j-c2,:]
+		for j in range(sz[1]):
+			if(img_mask[i,j].any()):
+				I_rep[i,j,:] = sky_resize[i,j,:]
 	return I_rep
+# def replace_sky(img,img_mask,ref,ref_mask):
+
+# 	# rect mask filtering
+# 	y2,x2,y1,x1=find_min_sky_rect(ref_mask)
+# 	print(y2,x2,y1,x1)
+# 	# 이 min조건을 단순히 거는게 아니라 이걸 걸어서 0이 되거나
+# 	# treshold를 못넘으면 제거되게 하면 되겠다.
+# 	roi = ref[y1:y2, x1:x2]
+
+# 	r1,c1,r2,c2=find_max_sky_rect(img_mask)
+# 	height=r1-r2+1
+# 	width=c1-c2+1
+
+# 	sky_resize = cv2.resize(roi, (width, height))
+
+# 	I_rep=img.copy()
+# 	sz=img.shape
+
+# 	for i in range(sz[0]):
+# 			for j in range(sz[1]):
+# 				if(img_mask[i,j].any()):
+# 					I_rep[i,j,:] = sky_resize[i-r2,j-c2,:]
+# 	return I_rep
 
 def guideFilter(I, p, mask_edge, winSize, eps):	#input p,giude I
     

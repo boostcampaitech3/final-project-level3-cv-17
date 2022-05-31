@@ -13,13 +13,8 @@ import numpy as np
 from mmseg.models import build_segmentor
 from mmcv.runner import load_checkpoint
 import mmcv
+import imutils
 
-# 오류가 나는 이유를 생각해보면 결국 코드를 가져오는 것이기 때문이다.
-# 여기에 spatial 모듈을 이 디렉토리에서 찾으면 일단 없고
-# 따로 PYTHON PTAH에 넣어놓은 것도 아니고
-# 설치 의존적 패키지도 아니니까 오류나는게 어떻게 보면 당연하다
-# 따라서 파이썬 프로젝트 코드 작성시 보통 어떻게 하는지 궁그맿서 찾아봤는데
-# 2번같이 해서 혹은 setup을 해서 어디서든 갖올 수 있게 해두면 된다.
 SKY_IMAGES_PATH = '/opt/ml/input/final-project-level3-cv-17/data/sky_images/database/img/*'
 
 
@@ -35,19 +30,23 @@ if __name__ =="__main__":
     parser.set_defaults(challenge=False)
     parser.add_argument('--check', dest = 'check',  action='store_true', help = 'If now challenge case, do model ')
     parser.set_defaults(check=False)
-    
+    parser.add_argument('--option', type=str,
+                                help='user select optoin', required=True)
     args =  parser.parse_args()
+    start_time = time.time()  
 
     img=cv2.cvtColor(cv2.imread(args.image_path,1), cv2.COLOR_BGR2RGB)
-    # sky=cv2.cvtColor(cv2.imread(args.sky_path,1), cv2.COLOR_BGR2RGB)
-
-    start_time = time.time()        
+    height, width = img.shape[:2]
+    if height >= width:
+        img = imutils.resize(img,height=1280) 
+    else:
+        img = imutils.resize(img,width=1280) 
 
     print('Start')
 
     if args.challenge :
         config_file = '/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/checkpoint/segformer.py'
-        checkpoint_file = '/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/checkpoint/epoch_34.pth'
+        checkpoint_file = '/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/mmseg_config/work_dirs/exp82/epoch_20.pth' #'/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/checkpoint/epoch_20.pth'
         cfg = mmcv.Config.fromfile(config_file)
         # model = init_segmentor(config_file, checkpoint_file, device='cuda:0')
         model = build_segmentor(cfg.model, test_cfg=cfg.get('test_cfg'))
@@ -59,34 +58,39 @@ if __name__ =="__main__":
         result = inference_segmentor(model, img)
         vfunc = np.vectorize(lambda x : 255 if x ==1 else 0)
         sky_mask = vfunc(result[0]).astype(np.uint8)  
+        img_b_clahe = img[:,:,2]#clahe.apply() 
+        vfunc = np.vectorize(lambda x : 255 if x >210 else 0)   
+        img_b = vfunc(img_b_clahe).astype('uint8')
+
+        sky_mask = cv2.bitwise_and(sky_mask,img_b)
 
     # filter based
     else:
-        sky_mask = process_image_or_folder(args)
-        print(sky_mask.shape)
-        print(type(sky_mask))
+        sky_mask = process_image_or_folder(args) # 이게 resize처리가 안되는 중
     
     sz=img.shape
 
-    # 직접 마스크 지정
-    # import pickle
-    # with open('/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/mmseg_config/mask.pkl', 'rb') as f:
-    #     sky_mask = pickle.load(f)
-    # print(sky_mask.shape)
-    # print(type(sky_mask))
-    # sky_mask = sky_mask.astype(np.uint8) 
+    # clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8)) #CLAHE 생성
+    # img_b_clahe = img[:,:,2]#clahe.apply() 
+    # vfunc = np.vectorize(lambda x : 255 if x >210 else 0)   
+    # img_b = vfunc(img_b_clahe).astype('uint8')
+
+    # sky_mask = cv2.bitwise_and(sky_mask,img_b)
 
     # select the sky
     if args.sky_path:
-        sky_path = args.sky_path
+        sky_path = args.sky_path # 애초에 가능한 이미지들만 보여주자.
     else:
-        sky_path = select.select_sky(args.image_path, SKY_IMAGES_PATH, sky_mask)
+        sky_paths = select.select_sky(args.image_path, sky_mask, option= args.option) 
 
+    # for test, select best clip score image
+    sky_path = sky_paths[0]
     print(sky_path)
-    sky=cv2.cvtColor(cv2.imread(sky_path,1), cv2.COLOR_BGR2RGB)
+
+    sky=cv2.cvtColor(cv2.imread(sky_path), cv2.COLOR_BGR2RGB)
     mask_path = sky_path.replace('img','mask')
-    ref_mask = cv2.imread(mask_path,0)
-    # 여기 어딘가에서 resize가 필요함
+    ref_mask = cv2.imread(mask_path,0) # 사용할 하늘 이미지들에 대해서는 미리 마스크가 추출되어 있어야함.
+
 
     # replace the sky
     I_rep=replace.replace_sky(img,sky_mask,sky,ref_mask)
