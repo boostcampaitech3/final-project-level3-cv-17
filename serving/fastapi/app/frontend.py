@@ -177,12 +177,13 @@ def main():
                     # 선택된 sky image bytes
                     sky_byte_arr = image_to_bytes(sky_image)
 
-                st.markdown(
-                    "![this is an image link](https://img.freepik.com/free-photo/white-cloud-on-blue-sky-and-sea_74190-4488.jpg?w=2000){:width=100 height=100}"
-                )
+                # 이미지 버튼 시도
+                # st.markdown(
+                #     "![this is an image link](https://img.freepik.com/free-photo/white-cloud-on-blue-sky-and-sea_74190-4488.jpg?w=2000){:width=100 height=100}"
+                # )
 
-                img = Image.open("images/top_spiderman.png")
-                st.button(st.image(img))
+                # img = Image.open("images/top_spiderman.png")
+                # st.button(st.image(img))
 
                 ### 해당 버튼을 눌렀을 때, sky replacement가 시작된다.
                 ### 추후에 각 이미지(3장) 별로 버튼을 만들면 될 듯.

@@ -13,6 +13,9 @@ PSD/pretrained_model/PSD-FFANET
 PSD/pretrained_model/PSD-GCANET
 PSD/pretrained_model/PSD-MSBDN
 
+serving/fastapi/app/__pycache__
+serving/fastapi/app/db/__pycache__
+
 data/sample/
 data/BeDDE/gt/
 data/BeDDE/hazy/
@@ -29,3 +32,4 @@ data/O_HAZE/hazy/
 data/RESIDE_RTTS/hazy/
 data/RESIDE_SOTS_OUT/gt/
 data/RESIDE_SOTS_OUT/hazy/
+data/sky_replacement
