@@ -1,13 +1,21 @@
 PSD/__pycache__
 PSD/datasets/__pycache__
 PSD/models/__pycache__
-
 PSD/output/
 
-SkyReplacement/Replacement/__pycache__
-SkyReplacement/SkySegmentation/__pycache__
-SkyReplacement/SkySegmentation/mmseg_config/__pycache__
+SkyReplacement/Replacement/__pycache__/
+SkyReplacement/SkySegmentation/__pycache__/
+SkyReplacement/SkySegmentation/mmsegmentation/
+SkyReplacement/SkySegmentation/mmseg_config/__pycache__/
+SkyReplacement/SkySegmentation/mmseg_config/wandb/
+SkyReplacement/SkySegmentation/mmseg_config/work_dirs/
+SkyReplacement/SkySegmentation/mmseg_config/pretrain/
+SkyReplacement/SkySegmentation/mmseg_config/test.ipynb
 SkyReplacement/SkySegmentation/checkpoint/epoch_34.pth
+SkyReplacement/SkySegmentation/mmseg_config/configs/_base_/upernet_swin_base_patch4_window7_512x512_160k_ade20k_pretrain_224x224_22K_20210526_211650-762e2178.pth
+SkyReplacement/Replacement/SkySelection/__pycache__/
+SkyReplacement/SkySegmentation/blue_value
+SkyReplacement/SkySegmentation/checkpoint
 
 PSD/pretrained_model/PSD-FFANET
 PSD/pretrained_model/PSD-GCANET
@@ -32,4 +40,9 @@ data/O_HAZE/hazy/
 data/RESIDE_RTTS/hazy/
 data/RESIDE_SOTS_OUT/gt/
 data/RESIDE_SOTS_OUT/hazy/
-data/sky_replacement
+data/skyseg/
+data/sky_images/
+data/dehazed_images/
+data/sky_replacement/
+data/sky_replacement_check/
+

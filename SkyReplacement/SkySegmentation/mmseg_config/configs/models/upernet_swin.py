@@ -35,12 +35,28 @@ model = dict(
         pool_scales=(1, 2, 3, 6),
         channels=512,
         dropout_ratio=0.1,
-        num_classes=2,
+        num_classes=150,
         norm_cfg=norm_cfg,
         align_corners=False,
          loss_decode=[
             dict(type='CrossEntropyLoss', use_sigmoid=False),
             dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)]),#avg_non_ignore=True)),
+    auxiliary_head=dict(
+        type='FCNHead',
+        in_channels=512,
+        in_index=2,
+        channels=256,
+        num_convs=1,
+        concat_input=False,
+        dropout_ratio=0.1,
+        num_classes=150,
+        norm_cfg=norm_cfg,
+        align_corners=False,
+        loss_decode=dict(
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)),
+
+
+
     # auxiliary_head=dict(
     #     type='FCNHead',
     #     in_channels=768,

@@ -152,10 +152,12 @@ def main():
     # im = Image.fromarray(results[0])
     # im.save("filename.png")
     # cv2.imwrite('./result.png',results)
-    # with open('logits.pickle', 'wb') as f:
-    #     pickle.dump(logits, f)
+    
+    with open('results2.pkl', 'wb') as f:
+        pickle.dump(results, f)
     # np.save('./logits_7941',logits)
     mmcv.dump(results, args.out)
+
     # submissions 
     # size = 256
     # results = np.array(results)
