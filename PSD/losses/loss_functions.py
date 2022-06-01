@@ -93,7 +93,7 @@ def get_atmosphere(I, dark_ch, p):
     flat_dc = dark_ch.resize(B, H * W)
     flat_I = I.resize(B, 3, H * W)
     index = torch.argsort(flat_dc, descending=True)[:, :num_pixel]
-    A = torch.zeros((B, 3)).to('cuda')
+    A = torch.zeros((B, 3)).to('cuda:0')
     
     for i in range(B):
         A[i] = flat_I[i, :, index].mean((1, 2))
@@ -108,7 +108,7 @@ def get_atmosphere2(I, bright_ch, p):
     flat_bc = bright_ch.resize(B, H * W)
     flat_I = I.resize(B, 3, H * W)
     index = torch.argsort(flat_bc, descending=False)[:, :num_pixel]
-    A = torch.zeros((B, 3)).to('cuda')
+    A = torch.zeros((B, 3)).to('cuda:0')
     
     for i in range(B):
         A[i] = flat_I[i, :, index].mean((1, 2))
@@ -141,7 +141,7 @@ def get_cap_loss(img, T):
 
     s, v = get_SV_from_HSV(img)
     sigma = 0.041337
-    sigmaMat = torch.normal(0, sigma, size=(B, 1, H, W)).to('cuda')
+    sigmaMat = torch.normal(0, sigma, size=(B, 1, H, W)).to('cuda:0')
 
     depth = 0.121779 + 0.959710 * v - 0.780245 * s + sigmaMat
     depth_R = -maxpool(-depth)
@@ -207,7 +207,7 @@ def attention_bc_loss(J, img):
 
     s, v = get_SV_from_HSV(img)
     sigma = 0.041337
-    sigmaMat = torch.normal(0, sigma, size=(B, 1, H, W)).to('cuda')
+    sigmaMat = torch.normal(0, sigma, size=(B, 1, H, W)).to('cuda:0')
 
     depth = 0.121779 + 0.959710 * v - 0.780245 * s + sigmaMat
     depth_R = -maxpool(-depth)
@@ -260,6 +260,19 @@ def lwf_sky(img, J, J_o, w=15):
     return loss
 
 
+def lwf_sky_not_limit(img, J, J_o, w=15):
+    
+    dc = get_dark_channel(img, w)
+    dc_shaped = dc.repeat(1, 3, 1, 1)
+    
+    if len(J) == 0:
+        return 0
+
+    loss = F.smooth_l1_loss(J, J_o)
+    
+    return loss
+
+
 def retinex_loss(J, img1, img2):
     
     s1, _ = get_SV_from_HSV(img1)
@@ -281,7 +294,7 @@ def get_luminance(img):
     maxpool = nn.MaxPool2d(15, stride=1, padding=15 // 2)
     dc = -maxpool(-Y[:, None])
     
-    target = torch.zeros(dc.shape).to('cuda')
+    target = torch.zeros(dc.shape).to('cuda:0')
     loss = F.smooth_l1_loss(dc, target)
     
     return loss

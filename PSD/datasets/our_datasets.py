@@ -44,6 +44,20 @@ def resize_before_crop(haze_img, gt_img, resize_size, crop_size):
     return haze_img, gt_img
 
 
+def valid_resize(haze_img, gt_img, min_size):
+    width, height = haze_img.size
+    
+    if width < min_size or height < min_size:
+        if width < height:
+            haze_img = haze_img.resize((min_size, int(min_size * (height/width))), Image.ANTIALIAS)
+            gt_img = gt_img.resize((min_size, int(min_size * (height/width))), Image.ANTIALIAS)
+        elif width >= height:
+            haze_img = haze_img.resize((int(min_size * (width/height)), min_size), Image.ANTIALIAS)
+            gt_img = gt_img.resize((int(min_size * (width/height)), min_size), Image.ANTIALIAS)
+    
+    return haze_img, gt_img
+
+
 class TrainData_label(torch.utils.data.Dataset):
     def __init__(self, crop_size, resize_size, train_data_dir):
         super().__init__()
@@ -177,6 +191,7 @@ class ValData_label(torch.utils.data.Dataset):
         
         haze_img = Image.open(os.path.join(self.haze_dir,haze_name)).convert('RGB')
         gt_img = Image.open(os.path.join(self.gt_dir,gt_name)).convert('RGB')
+        # haze_img, gt_img = valid_resize(haze_img, gt_img, min_size=512)
 
         haze_reshaped = haze_img
         haze_reshaped = haze_reshaped.resize((512, 512), Image.ANTIALIAS)

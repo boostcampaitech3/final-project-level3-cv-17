@@ -41,7 +41,7 @@ class energy_dc_loss(nn.Module):
         UU_T = torch.matmul(mean_patches.permute(0, 1, 3, 2), mean_patches)
         var_patches = XX_T - UU_T
         
-        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda') + var_patches
+        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda:0') + var_patches
         var_fac = torch.inverse(matrix_to_invert)
         
         weights = torch.matmul(img_patches - mean_patches, var_fac)
@@ -74,7 +74,7 @@ class energy_dc_loss(nn.Module):
         flat_dc = dark_ch.resize(B, H * W)
         flat_I = I.resize(B, 3, H * W)
         index = torch.argsort(flat_dc, descending=True)[:, :num_pixel]
-        A = torch.zeros((B, 3)).to('cuda')
+        A = torch.zeros((B, 3)).to('cuda:0')
         
         for i in range(B):
             A[i] = flat_I[i, :, index[i][torch.argsort(torch.max(flat_I[i][:, index[i]], 0)[0], descending=True)[0]]]
@@ -118,7 +118,7 @@ class energy_bc_loss(nn.Module):
         UU_T = torch.matmul(mean_patches.permute(0, 1, 3, 2), mean_patches)
         var_patches = XX_T - UU_T
         
-        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda') + var_patches
+        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda:0') + var_patches
         var_fac = torch.inverse(matrix_to_invert)
         
         weights = torch.matmul(img_patches - mean_patches, var_fac)
@@ -160,7 +160,7 @@ class energy_bc_loss(nn.Module):
         flat_bc = bright_ch.resize(B, H * W)
         flat_I = I.resize(B, 3, H * W)
         index = torch.argsort(flat_bc, descending=False)[:, :num_pixel]
-        A = torch.zeros((B, 3)).to('cuda')
+        A = torch.zeros((B, 3)).to('cuda:0')
         
         for i in range(B):
             A[i] = flat_I[i, :, index].mean((1, 2))
@@ -211,7 +211,7 @@ class energy_dc_bc_loss(nn.Module):
         UU_T = torch.matmul(mean_patches.permute(0, 1, 3, 2), mean_patches)
         var_patches = XX_T - UU_T
         
-        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda') + var_patches
+        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda:0') + var_patches
         var_fac = torch.inverse(matrix_to_invert)
         
         weights = torch.matmul(img_patches - mean_patches, var_fac)
@@ -256,7 +256,7 @@ class energy_dc_bc_loss(nn.Module):
         flat_dc = dark_ch.resize(B, H * W)
         flat_I = I.resize(B, 3, H * W)
         index = torch.argsort(flat_dc, descending=True)[:, :num_pixel]
-        A = torch.zeros((B, 3)).to('cuda')
+        A = torch.zeros((B, 3)).to('cuda:0')
         for i in range(B):
             A[i] = flat_I[i, :, index[i][torch.argsort(torch.max(flat_I[i][:, index[i]], 0)[0], descending=True)[0]]]
 
@@ -270,7 +270,7 @@ class energy_dc_bc_loss(nn.Module):
         flat_bc = bright_ch.resize(B, H * W)
         flat_I = I.resize(B, 3, H * W)
         index = torch.argsort(flat_bc, descending=False)[:, :num_pixel]
-        A = torch.zeros((B, 3)).to('cuda')
+        A = torch.zeros((B, 3)).to('cuda:0')
         
         for i in range(B):
             A[i] = flat_I[i, :, index].mean((1, 2))
@@ -296,7 +296,7 @@ class energy_cap_loss(nn.Module):
         s = s[:, None]
         v = v[:, None]
         sigma = 0.041337
-        sigmaMat = torch.normal(0, sigma, size=(B, 1, H, W)).to('cuda')
+        sigmaMat = torch.normal(0, sigma, size=(B, 1, H, W)).to('cuda:0')
         
         depth = 0.121779 + 0.959710 * v - 0.780245 * s + sigmaMat
 
@@ -320,7 +320,7 @@ class energy_cap_loss(nn.Module):
         UU_T = torch.matmul(mean_patches.permute(0, 1, 3, 2), mean_patches)
         var_patches = XX_T - UU_T
         
-        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda') + var_patches
+        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda:0') + var_patches
         var_fac = torch.inverse(matrix_to_invert)
         
         weights = torch.matmul(img_patches - mean_patches, var_fac)
@@ -471,7 +471,7 @@ class energy_dc_loss_edge(nn.Module):
         UU_T = torch.matmul(mean_patches.permute(0, 1, 3, 2), mean_patches)
         var_patches = XX_T - UU_T
         
-        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda') + var_patches
+        matrix_to_invert = (self.eps / 9) * torch.eye(3).to('cuda:0') + var_patches
         var_fac = torch.inverse(matrix_to_invert)
         
         weights = torch.matmul(img_patches - mean_patches, var_fac)
@@ -529,7 +529,7 @@ class energy_dc_loss_edge(nn.Module):
         flat_dc = dark_ch.resize(B, H * W)
         flat_I = I.resize(B, 3, H * W)
         index = torch.argsort(flat_dc, descending=True)[:, :num_pixel]
-        A = torch.zeros((B, 3)).to('cuda')
+        A = torch.zeros((B, 3)).to('cuda:0')
         
         for i in range(B):
             A[i] = flat_I[i, :, index[i][torch.argsort(torch.max(flat_I[i][:, index[i]], 0)[0], descending=True)[0]]]

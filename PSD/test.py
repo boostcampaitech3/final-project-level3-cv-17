@@ -19,7 +19,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-test_data_dir = '../data/Hidden/hazy/'
+test_data_dir = '../data/Crawling/hazy/'
     
 device_ids = [Id for Id in range(torch.cuda.device_count())]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -30,7 +30,7 @@ net = MSBDNNet()
 net = nn.DataParallel(net, device_ids=device_ids)
 
 # model_path = '/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model/PSD-MSBDN'
-model_path = '/opt/ml/input/final-project-level3-cv-17/PSD/work_dirs/exp5/best_SSIM_epoch4.pth'
+model_path = '/opt/ml/input/final-project-level3-cv-17/PSD/work_dirs/exp9/best_PSNR_epoch4.pth'
 # net.load_state_dict(torch.load('PSD-GCANET'))
 # net.load_state_dict(torch.load('PSD-FFANET'))
 net.load_state_dict(torch.load(model_path))
@@ -39,7 +39,7 @@ net.eval()
 # test_data_loader = DataLoader(TestData_GCA(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For GCA
 test_data_loader = DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
 
-output_dir = '/opt/ml/input/final-project-level3-cv-17/PSD/output/' + model_path.split('/')[-1].split('.')[0] + '/' + test_data_dir.split('/')[2] + '/'
+output_dir = '/opt/ml/input/final-project-level3-cv-17/PSD/output/' + model_path.split('/')[-2] + '/' + model_path.split('/')[-1].split('.')[0] + '/' + test_data_dir.split('/')[2] + '/'
 make_directory(output_dir)
     
 with torch.no_grad():

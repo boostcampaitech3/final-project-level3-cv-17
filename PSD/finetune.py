@@ -7,7 +7,7 @@ from tqdm import tqdm
 from datasets.concat_dataset import ConcatDataset, ConcatDataset_return_max
 from datasets.our_datasets import TrainData_label, TrainData_unlabel, ValData_label
 from losses.energy_functions import energy_dc_loss
-from losses.loss_functions import bright_channel, lwf_sky
+from losses.loss_functions import bright_channel, lwf_sky, lwf_sky_not_limit
 from utils import *
 from wandb_setup import wandb_login, wandb_init
 
@@ -39,7 +39,7 @@ def get_parser():
     parser.add_argument('--val_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/data/RESIDE_SOTS_OUT')
     
     parser.add_argument('--unlabel_gt_type', type=str, default='gt_clahe_1_64', help='unlabel data gt folder name')
-    parser.add_argument('--unlabel_index_dir', type=str, default='', help='directory of unlabel data index list')
+    parser.add_argument('--unlabel_index_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/data/RESIDE_RTTS/1_64_Ver0.npy', help='directory of unlabel data index list')
     parser.add_argument('--concat_return_max', action='store_true', default=False, help='repeat data or not in ConcatDatasat')
 
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -47,6 +47,10 @@ def get_parser():
     parser.add_argument('--decay_step', type=float, default=2)
     parser.add_argument('--lr_decay', type=float, default=0.8)
 
+    parser.add_argument('--I_I2_loss', action='store_true', default=False)
+    parser.add_argument('--lambda_I_I2', type=float, default=0)
+    parser.add_argument('--lwf_sky_not_limit', action='store_true', default=False)
+    
     parser.add_argument('--lambda_dc', type=float, default=1e-3)
     parser.add_argument('--lambda_bc', type=float, default=1e-2)
     parser.add_argument('--lambda_CLAHE', type=float, default=1)
@@ -68,6 +72,7 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
     for epoch in range(opt.num_epochs):
         # --- train --- #
         train_loss, train_DCP_loss, train_BCP_loss, train_CLAHE_loss, train_Rec_loss, train_LwF_loss = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        if opt.I_I2_loss: train_I_I2_loss = 0.0
         learning_rate = adjust_learning_rate(wandb, optimizer, epoch, opt.category, opt.decay_step, opt.lr_decay)
         wandb.log({'learning_rate':learning_rate}, commit=False)
         
@@ -105,12 +110,17 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             bc_loss = bright_channel(unlabel_haze, T)
             CLAHE_loss = F.smooth_l1_loss(I2, unlabel_haze)
             rec_loss = F.smooth_l1_loss(I, unlabel_haze)
-            lwf_loss_sky = lwf_sky(unlabel_haze, J, J_o)
+            if opt.lwf_sky_not_limit:
+                lwf_loss_sky = lwf_sky_not_limit(unlabel_haze, J, J_o)
+            else:
+                lwf_loss_sky = lwf_sky(unlabel_haze, J, J_o)
             lwf_loss_label = F.smooth_l1_loss(out_label, out_label_o)
             lwf_loss_unlabel = F.smooth_l1_loss(out, out_o)
+            if opt.I_I2_loss: I_I2_loss = F.smooth_l1_loss(I, I2)
             
             total_loss = opt.lambda_dc*energy_dc_loss + opt.lambda_bc*bc_loss + opt.lambda_CLAHE*CLAHE_loss + opt.lambda_rec*rec_loss
             total_loss += opt.lambda_lwf_sky*lwf_loss_sky + opt.lambda_lwf_label*lwf_loss_label + opt.lambda_lwf_unlabel*lwf_loss_unlabel
+            if opt.I_I2_loss: total_loss += I_I2_loss
             total_loss.backward()
             optimizer.step()
 
@@ -122,7 +132,10 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             if lwf_loss_sky != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_sky.item()
             if lwf_loss_label != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_label.item()
             if lwf_loss_unlabel != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_unlabel.item()
-
+            if opt.I_I2_loss:
+                if I_I2_loss != 0:
+                    train_I_I2_loss += opt.lambda_I_I2*I_I2_loss.item()
+            
             pbar.set_postfix(
                 Total_Loss=f" {train_loss/(b_id+1):.3f}", DCP_Loss=f" {train_DCP_loss/(b_id+1):.3f}", BCP_Loss=f" {train_BCP_loss/(b_id+1):.3f}",
                 CLAHE_Loss=f" {train_CLAHE_loss/(b_id+1):.3f}", Rec_Loss=f" {train_Rec_loss/(b_id+1):.3f}", LwF_Loss=f" {train_LwF_loss/(b_id+1):.3f}",
@@ -132,7 +145,8 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
                    'train/CLAHE_loss':train_CLAHE_loss/(b_id+1), 'train/Rec_loss':train_Rec_loss/(b_id+1), 'train/LwF_loss':train_LwF_loss/(b_id+1),
                    'train_run_time':time.time() - start_time,
                    }, commit=False)
-
+        if opt.I_I2_loss: wandb.log({'train/I_I2_loss':train_I_I2_loss/(b_id+1)}, commit=False)
+        
 
         # --- evaluation --- #
         net.eval()
@@ -222,7 +236,8 @@ def main(opt):
             torch.utils.data.ConcatDataset(
                 [TrainData_label(opt.crop_size, opt.resize_size, data_dir) for data_dir in opt.label_dir]),
             TrainData_unlabel(opt.crop_size, opt.resize_size, opt.unlabel_dir,
-                              gt_type=opt.unlabel_gt_type, unlabel_index_dir=opt.unlabel_index_dir))
+                              gt_type=opt.unlabel_gt_type, unlabel_index_dir=opt.unlabel_index_dir),
+            unlabel_index_dir=opt.unlabel_index_dir)
     else:
         concat_dataset = ConcatDataset(
             torch.utils.data.ConcatDataset(

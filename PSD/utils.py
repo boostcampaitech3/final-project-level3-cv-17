@@ -36,7 +36,7 @@ def get_atmosphere(I, dark_ch, p):
     flat_dc = dark_ch.resize(B, H * W)
     flat_I = I.resize(B, 3, H * W)
     index = torch.argsort(flat_dc, descending=True)[:, :num_pixel]
-    A = torch.zeros((B, 3)).to('cuda')
+    A = torch.zeros((B, 3)).to('cuda:0')
     for i in range(B):
         A[i] = flat_I[i, :, index[i][torch.argsort(torch.max(flat_I[i][:, index[i]], 0)[0], descending=True)[0]]]
 
