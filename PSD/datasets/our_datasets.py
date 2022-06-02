@@ -5,13 +5,13 @@ import numpy as np
 from PIL import Image
 
 import torch
-from torchvision.transforms import Compose, ToTensor, Normalize
+from torchvision.transforms import Compose, ToTensor, Normalize, RandomHorizontalFlip
 
 
 def correct_gt_name(data_name, gt_name):
     if data_name == 'RESIDE-OTS':
         gt_name = gt_name.split('_')[0] + '.jpg'
-    elif data_name == 'BeDDE':
+    elif 'BeDDE' in data_name:
         gt_name = gt_name.split('_')[0] + '_clear.png'
     elif data_name == 'MRFID':
         gt_name = gt_name[:-5] + '0.jpg'
@@ -97,11 +97,17 @@ class TrainData_label(torch.utils.data.Dataset):
         haze_crop_img = haze_img.crop((x, y, x + crop_size, y + crop_size))
         gt_crop_img = gt_img.crop((x, y, x + crop_size, y + crop_size))
         
+        cW, cH = haze_crop_img.size
+        
         transform_haze = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         transform_gt = Compose([ToTensor()])
+        transform_cat = Compose([RandomHorizontalFlip()])
 
         haze = transform_haze(haze_crop_img)
         gt = transform_gt(gt_crop_img)
+        cat_img = torch.cat((haze, gt), dim=1) #C, 2H, W
+        cat_img = transform_cat(cat_img)
+        haze, gt = cat_img[:,:cH],cat_img[:,cH:]
 
         return haze, gt
 
@@ -248,10 +254,9 @@ class ETCDataset(torch.utils.data.Dataset):
 
 if __name__=='__main__':
     
-    test_data_dir = '/opt/ml/input/final-project-level3-cv-17/data/RESIDE_SOTS_OUT/hazy'
-    test_data_loader = torch.utils.data.DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
-    
+    test_data_dir = '/opt/ml/input/final-project-level3-cv-17/data/RESIDE-SOTS-OUT'
+    test_data_loader = torch.utils.data.DataLoader(TrainData_label(256, 512, test_data_dir), batch_size=8, shuffle=True, num_workers=8) # For FFA and MSBDN
+    # test_data_loader = torch.utils.data.DataLoader(ETCDataset(test_data_dir), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
     for i, data in enumerate(test_data_loader):
-       print(f'rst[0] : {data[0].shape}')
-       print(f'rst[1] : {data[1].shape}')
-       print(f'rst[2] : {data[2]}')
+        haze, gt = data
+        print(f'haze shape : {haze.shape}, gt shape : {gt.shape}')
