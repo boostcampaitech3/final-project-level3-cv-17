@@ -1,27 +1,17 @@
 PSD/__pycache__
 PSD/datasets/__pycache__
 PSD/models/__pycache__
+PSD/losses/__pycache__
 
 PSD/output/
+PSD/wandb/
+PSD/work_dirs/
+PSD/pretrained_model/
+PSD/wandb_setup.py
 
+data/
 
-PSD/pretrained_model/PSD-FFANET
-PSD/pretrained_model/PSD-GCANET
-PSD/pretrained_model/PSD-MSBDN
-
-data/sample/
-data/BeDDE/gt/
-data/BeDDE/hazy/
-data/BeDDE/mask/
-data/Crawling/gt/
-data/Crawling/hazy/
-data/Hidden/hazy/
-data/MRFID/gt/
-data/MRFID/hazy/
-data/NH_HAZE/gt/
-data/NH_HAZE/hazy/
-data/O_HAZE/gt/
-data/O_HAZE/hazy/
-data/RESIDE_RTTS/hazy/
-data/RESIDE_SOTS_OUT/gt/
-data/RESIDE_SOTS_OUT/hazy/
+SkyReplacement/Replacement/__pycache__
+SkyReplacement/Replacement/SkySelection/__pycache__
+SkyReplacement/SkySegmentation/__pycache__
+SkyReplacement/SkySegmentation/mmseg_config/__pycache__

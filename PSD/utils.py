@@ -1,11 +1,15 @@
 import os
+import re
 import time
+import glob
+import random
+import wandb
+import numpy as np
+from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.utils as utils
-from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 import math
@@ -15,8 +19,9 @@ from math import exp
 from models.GCA import GCANet
 from models.FFA import FFANet
 from models.MSBDN import MSBDNNet
+from models.dehazeformer import dehazeformer_m, dehazeformer_b
 
-from datasets.pretrain_datasets import *
+from datasets.pretrain_datasets import TestData
 
 
 def get_dark_channel(I, w):
@@ -32,7 +37,7 @@ def get_atmosphere(I, dark_ch, p):
     flat_dc = dark_ch.resize(B, H * W)
     flat_I = I.resize(B, 3, H * W)
     index = torch.argsort(flat_dc, descending=True)[:, :num_pixel]
-    A = torch.zeros((B, 3)).to('cuda')
+    A = torch.zeros((B, 3)).to('cuda:0')
     for i in range(B):
         A[i] = flat_I[i, :, index[i][torch.argsort(torch.max(flat_I[i][:, index[i]], 0)[0], descending=True)[0]]]
 
@@ -100,6 +105,7 @@ def validation(net, net_name, val_data_loader, device, category, save_tag=False)
             haze = haze.to(device)
             gt = gt.to(device)
             B, _, H, W = haze.shape
+
             if net_name == 'MSBDNNet':
                 if haze.size()[2] % 16 != 0 or haze.size()[3] % 16 != 0:
                     haze = F.upsample(haze, [haze.size()[2] + 16 - haze.size()[2] % 16,
@@ -107,25 +113,23 @@ def validation(net, net_name, val_data_loader, device, category, save_tag=False)
                 if gt.size()[2] % 16 != 0 or gt.size()[3] % 16 != 0:
                     gt = F.upsample(gt, [gt.size()[2] + 16 - gt.size()[2] % 16, 
                                     gt.size()[3] + 16 - gt.size()[3] % 16], mode='bilinear')
-                dehaze = net(haze, 0, True)
+                out, out_J, out_T, out_A, out_I = net(haze, haze_A, True)
             else:
-                dehaze = net(haze, True)
+                out, out_J, out_T, out_A, out_I = net(haze, True)
             #T = net(haze)
             #dc = get_dark_channel(haze, 15)
             #A = get_atmosphere(haze, dc, 0.001).repeat_interleave(H*W).view(B, 3, H, W)
             #dehaze = ((haze - A) / T + A).clamp(0, 1)
 
         # --- Calculate the average PSNR --- #
-        psnr_list.extend(to_psnr(dehaze, gt))
+        psnr_list.extend(to_psnr(out_J, gt))
 
         # --- Calculate the average SSIM --- #
-        ssim_list.extend(ssim(dehaze, gt))
+        ssim_list.extend(ssim(out_J, gt))
 
         # --- Save image --- #
         if save_tag:
-            save_image(dehaze, image_name, category)
-        if batch_id % 20 == 0:
-            print('Batch_id:', batch_id)
+            save_image(out_J, image_name, category)
 
     avr_psnr = sum(psnr_list) / len(psnr_list)
     avr_ssim = sum(ssim_list) / len(ssim_list)
@@ -137,32 +141,28 @@ def save_image(dehaze, image_name, category):
     batch_num = len(dehaze_images)
 
     for ind in range(batch_num):
-        utils.save_image(dehaze_images[ind], './{}_results/{}'.format(category, image_name[ind][:-3] + 'png'))
+        torchvision.utils.save_image(dehaze_images[ind], './{}_results/{}'.format(category, image_name[ind][:-3] + 'png'))
 
 
 def print_log(epoch, num_epochs, one_epoch_time, train_psnr, val_psnr, val_ssim, category):
     print('({0:.0f}s) Epoch [{1}/{2}], Train_PSNR:{3:.2f}, Val_PSNR:{4:.2f}, Val_SSIM:{5:.4f}'
           .format(one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim))
 
-    # --- Write the training log --- #
     with open('/output/{}_log.txt'.format(category), 'a') as f:
         print('Date: {0}s, Time_Cost: {1:.0f}s, Epoch: [{2}/{3}], Train_PSNR: {4:.2f}, Val_PSNR: {5:.2f}, Val_SSIM: {6:.4f}'
               .format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                       one_epoch_time, epoch, num_epochs, train_psnr, val_psnr, val_ssim), file=f)
 
 
-def adjust_learning_rate(optimizer, epoch, category, lr_decay=0.5):
+def adjust_learning_rate(wandb, optimizer, epoch, category, decay_step, lr_decay):
 
-    # --- Decay learning rate --- #
-    step = 20 if category == 'indoor' else 10
-
-    if not epoch % step and epoch > 0:
+    if not (epoch+1) % decay_step:
         for param_group in optimizer.param_groups:
             param_group['lr'] *= lr_decay
-            print('Learning rate sets to {}.'.format(param_group['lr']))
+            return param_group['lr']
     else:
         for param_group in optimizer.param_groups:
-            print('Learning rate sets to {}.'.format(param_group['lr']))
+            return param_group['lr']
             
 
 def edge_compute(x):
@@ -184,7 +184,7 @@ def generate_test_images(net, TestData, num_epochs, chosen_epoch):
     epoch = 0
     net.eval()
     test_data_dir = '/data/nnice1216/unlabeled1/'
-    test_data_loader = DataLoader(TestData(test_data_dir), batch_size=1, shuffle=False, num_workers=8)
+    test_data_loader = torch.utils.data.DataLoader(TestData(test_data_dir), batch_size=1, shuffle=False, num_workers=8)
 
     with torch.no_grad():
         for epoch in range(num_epochs):
@@ -213,36 +213,48 @@ def generate_test_images(net, TestData, num_epochs, chosen_epoch):
                 print(name[0].split('.')[0] + 'DONE!')
                 
 
-def load_model(backbone, model_dir, device, device_ids):
+def load_model(backbone, model_dir, device, device_ids, type='finetune'):
     
     if backbone == 'GCANet':
-        
         net = GCANet()
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
-        model_path = os.path.join(model_dir, 'GCA_pretrain.pth')
+        model_path = os.path.join(model_dir, 'PSD-GCANET')
         net.load_state_dict(torch.load(model_path))
         
-        
     if backbone == 'FFANet':
-        
         gps = 3
         blocks = 19
         net = FFANet(gps=gps,blocks=blocks)
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
-        model_path = os.path.join(model_dir, 'FFA_pretrain.pth')
+        model_path = os.path.join(model_dir, 'PSD-FFANET')
         net.load_state_dict(torch.load(model_path))
         
-        
     if backbone == 'MSBDNNet':
-        
         net = MSBDNNet()
         net.to(device)
         net = nn.DataParallel(net, device_ids=device_ids)
-        model_path = os.path.join(model_dir, 'MSBDNNet_pretrain.pth')
+        model_path = os.path.join(model_dir, 'PSD-MSBDN')
         net.load_state_dict(torch.load(model_path))
-        
+    
+    if backbone == 'DehazeFormer_m':
+        net = dehazeformer_m()
+        net.to(device)
+        net = nn.DataParallel(net, device_ids=device_ids)
+        if type=='pretrian':
+            model_path = os.path.join(model_dir, 'dehazeformer-m.pth')
+            net.load_state_dict(torch.load(model_path)['state_dict'], strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
+        elif type=='finetune':
+            model_path = os.path.join(model_dir, 'PSD-Dehazeformer.pth') # Epoch39.pth
+            net.load_state_dict(torch.load(model_path), strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
+
+    if backbone == 'DehazeFormer_b':
+        net = dehazeformer_b()
+        net.to(device)
+        net = nn.DataParallel(net, device_ids=device_ids)
+        model_path = os.path.join(model_dir, 'dehazeformer-b.pth')
+        net.load_state_dict(torch.load(model_path)['state_dict'], strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
         
     return net
 
@@ -250,3 +262,109 @@ def load_model(backbone, model_dir, device, device_ids):
 def make_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
+
+
+def increment_path(path, exist_ok=False):
+    """ Automatically increment path, i.e. runs/exp --> runs/exp0, runs/exp1 etc.
+    Args:
+        path (str or pathlib.Path): f"{model_dir}/{args.name}".
+        exist_ok (bool): whether increment path (increment if False).
+    """
+    path = Path(path)
+    if (path.exists() and exist_ok) or (not path.exists()):
+        return str(path)
+    else:
+        dirs = glob.glob(f"{path}*")
+        matches = [
+            re.search(rf"%s(\d+)" % path.stem, d) for d in dirs
+        ]  
+        i = [int(m.groups()[0]) for m in matches if m]  
+        n = max(i) + 1 if i else 2
+        return f"{path}{n}"
+
+
+def set_seed(seed):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+def train_unlabel_image_for_viz(unlabel_haze, unlabel_gt):
+    train_unlabel_imgs = []
+    train_unlabel_gts = []
+    for train_unlabel_img, train_unlabel_gt in zip(unlabel_haze, unlabel_gt):
+        train_unlabel_img = train_unlabel_img.permute(1,2,0).cpu().numpy()
+        train_unlabel_gt = train_unlabel_gt.permute(1,2,0).cpu().numpy()
+        train_unlabel_imgs.append(wandb.Image(train_unlabel_img))
+        train_unlabel_gts.append(wandb.Image(train_unlabel_gt))
+    
+    return train_unlabel_imgs, train_unlabel_gts
+
+
+def train_pred_image_for_viz(finetune_out, backbone_out):
+    batch_b_out_imgs = []
+    batch_f_out_imgs = []
+    for f_out, b_out in zip(finetune_out, backbone_out):
+        batch_b_out = b_out.detach().permute(1,2,0).cpu().numpy()
+        batch_f_out = f_out.detach().permute(1,2,0).cpu().numpy()
+        batch_b_out_imgs.append(wandb.Image(batch_b_out))
+        batch_f_out_imgs.append(wandb.Image(batch_f_out))
+    
+    return batch_b_out_imgs, batch_f_out_imgs
+
+def pretrain_val_pred_image_for_viz(haze_img, val_pred_img, gt):
+    batch_haze_img = []
+    batch_val_pred_img = []
+    batch_gt = []
+    for h_out, vpout, gt_out in zip(haze_img, val_pred_img, gt):
+        vis_haze_img = h_out.detach().permute(1,2,0).cpu().numpy()
+        vis_val_pred_img = vpout.detach().permute(1,2,0).cpu().numpy()
+        vis_gt = gt_out.detach().permute(1,2,0).cpu().numpy()
+        batch_haze_img.append(wandb.Image(vis_haze_img))
+        batch_val_pred_img.append(wandb.Image(vis_val_pred_img))
+        batch_gt.append(wandb.Image(vis_gt))
+    
+    return batch_haze_img, batch_val_pred_img, batch_gt
+
+def pretrain_train_pred_image_for_viz(original_haze_img, reconstruct_haze_img, original_clear_img, pretrained_clear_img):
+    batch_ori_haze_imgs = []
+    batch_rec_haze_imgs = []
+    batch_ori_clear_imgs = []
+    batch_pretrained_clear_imgs = []
+    for ori_haze_out, rec_haze_out, ori_clr_out, pret_clr_out in zip(original_haze_img, reconstruct_haze_img, original_clear_img, pretrained_clear_img):
+        batch_ori_haze_out = ori_haze_out.detach().permute(1,2,0).cpu().numpy()
+        batch_rec_haze_out = rec_haze_out.detach().permute(1,2,0).cpu().numpy()
+        batch_ori_clr_outt = ori_clr_out.detach().permute(1,2,0).cpu().numpy()
+        batch_pret_clr_out = pret_clr_out.detach().permute(1,2,0).cpu().numpy()
+        batch_ori_haze_imgs.append(wandb.Image(batch_ori_haze_out))
+        batch_rec_haze_imgs.append(wandb.Image(batch_rec_haze_out))
+        batch_ori_clear_imgs.append(wandb.Image(batch_ori_clr_outt))
+        batch_pretrained_clear_imgs.append(wandb.Image(batch_pret_clr_out))
+    
+    return batch_ori_haze_imgs, batch_rec_haze_imgs, batch_ori_clear_imgs, batch_pretrained_clear_imgs
+
+
+def update_best_info(best_path, best_score, best_epoch, val_score, val_epoch, metric, minmax, work_dir_exp, net):
+    if minmax == 'max':
+        if best_score < val_score:
+            best_score, best_epoch = val_score, val_epoch+1
+            best_path = os.path.join(work_dir_exp, f'best_{metric}.pth')
+            torch.save(net.state_dict(), best_path)
+    elif minmax == 'min':
+        if best_score > val_score:
+            best_score, best_epoch = val_score, val_epoch+1
+            best_path = os.path.join(work_dir_exp, f'best_{metric}.pth')
+            torch.save(net.state_dict(), best_path)
+    
+    return best_path, best_score, best_epoch
+
+
+def update_save_epoch(best_path, best_epoch):
+    new_best_path = best_path[:-4] + f"_epoch{best_epoch}.pth"
+    os.rename(best_path, new_best_path)
