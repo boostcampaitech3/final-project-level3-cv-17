@@ -23,7 +23,7 @@ def get_parser():
     parser.add_argument('--category', type=str, default='outdoor', help='dataset type: indoor / outdoor') # only outdoor
     parser.add_argument('--work_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/PSD/work_dirs')
     parser.add_argument('--pretrain_model_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model')
-    parser.add_argument('--train_batch_size', type=int, default=2)
+    parser.add_argument('--train_batch_size', type=int, default=2) # DehazeFormer_m=2 & MSBDN=8
     parser.add_argument('--val_batch_size', type=int, default=1) # do not change
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--crop_size', type=int, default=256, help='size of random crop')
@@ -50,6 +50,8 @@ def get_parser():
 
     parser.add_argument('--I_I2_loss', action='store_true', default=False)
     parser.add_argument('--lambda_I_I2', type=float, default=0)
+    parser.add_argument('--cr_loss_label', action='store_true', default=False)
+    parser.add_argument('--lambda_cr', type=float, default=0)
     parser.add_argument('--lwf_sky_not_limit', action='store_true', default=False)
     
     parser.add_argument('--lambda_dc', type=float, default=1e-3)
@@ -65,7 +67,7 @@ def get_parser():
 
 
 def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, net_o, loss_dc, optimizer,
-          metric_PSNR, metric_SSIM, metric_NIQE, metric_BRIS, metric_NIMA, criterion):
+          metric_PSNR, metric_SSIM, metric_NIQE, metric_BRIS, metric_NIMA, loss_cr):
     best_PSNR, best_SSIM, best_NIQE, best_BRIS, best_NIMA = 0.0, 0.0, 999999.0, 999999.0, 0.0
     best_PSNR_epoch, best_SSIM_epoch, best_NIQE_epoch, best_BRIS_epoch, best_NIMA_epoch = 0, 0, 0, 0, 0
     best_PSNR_path, best_SSIM_path, best_NIQE_path, best_BRIS_path, best_NIMA_path = '', '', '', '', ''
@@ -118,11 +120,12 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             lwf_loss_label = F.smooth_l1_loss(out_label, out_label_o)
             lwf_loss_unlabel = F.smooth_l1_loss(out, out_o)
             if opt.I_I2_loss: I_I2_loss = F.smooth_l1_loss(I, I2)
-            c_loss_haze_label = criterion(J_label, label_gt, label_haze)
+            if opt.cr_loss_label: c_loss_haze_label = loss_cr(J_label, label_gt, label_haze)
             
             total_loss = opt.lambda_dc*energy_dc_loss + opt.lambda_bc*bc_loss + opt.lambda_CLAHE*CLAHE_loss + opt.lambda_rec*rec_loss
             total_loss += opt.lambda_lwf_sky*lwf_loss_sky + opt.lambda_lwf_label*lwf_loss_label + opt.lambda_lwf_unlabel*lwf_loss_unlabel
             if opt.I_I2_loss: total_loss += I_I2_loss
+            if opt.cr_loss_label: total_loss += c_loss_haze_label
             total_loss.backward()
             optimizer.step()
 
@@ -137,19 +140,20 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             if opt.I_I2_loss:
                 if I_I2_loss != 0:
                     train_I_I2_loss += opt.lambda_I_I2*I_I2_loss.item()
-            if c_loss_haze_label != 0: train_label_contrast_loss += c_loss_haze_label.item()
+            if opt.cr_loss_label:
+                if c_loss_haze_label != 0: train_label_contrast_loss += c_loss_haze_label.item()
 
             pbar.set_postfix(
                 Total_Loss=f" {train_loss/(b_id+1):.3f}", DCP_Loss=f" {train_DCP_loss/(b_id+1):.3f}", BCP_Loss=f" {train_BCP_loss/(b_id+1):.3f}",
                 CLAHE_Loss=f" {train_CLAHE_loss/(b_id+1):.3f}", Rec_Loss=f" {train_Rec_loss/(b_id+1):.3f}", LwF_Loss=f" {train_LwF_loss/(b_id+1):.3f}",
-                contrast_label_loss=f" {train_label_contrast_loss/(b_id+1):.3f}"
                 )
         
         wandb.log({'train/total_loss':train_loss/(b_id+1), 'train/DCP_loss':train_DCP_loss/(b_id+1), 'train/BCP_loss':train_BCP_loss/(b_id+1),
                    'train/CLAHE_loss':train_CLAHE_loss/(b_id+1), 'train/Rec_loss':train_Rec_loss/(b_id+1), 'train/LwF_loss':train_LwF_loss/(b_id+1),
-                   'train/contrast_label_loss':train_label_contrast_loss/(b_id+1), 'train_run_time':time.time() - start_time,
+                   'train_run_time':time.time() - start_time,
                    }, commit=False)
         if opt.I_I2_loss: wandb.log({'train/I_I2_loss':train_I_I2_loss/(b_id+1)}, commit=False)
+        if opt.cr_loss_label: wandb.log({'train/contrast_label_loss':train_label_contrast_loss/(b_id+1)}, commit=False)
         
 
         # --- evaluation --- #
@@ -270,10 +274,10 @@ def main(opt):
     metric_NIQE = pyiqa.create_metric('niqe').to(device)
     metric_BRIS = pyiqa.create_metric('brisque').to(device)
     metric_NIMA = pyiqa.create_metric('nima').to(device)
-    criterion = ContrastLoss()
+    loss_cr = ContrastLoss()
 
     train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, net_o, loss_dc, optimizer,
-          metric_PSNR, metric_SSIM, metric_NIQE, metric_BRIS, metric_NIMA, criterion)
+          metric_PSNR, metric_SSIM, metric_NIQE, metric_BRIS, metric_NIMA, loss_cr)
 
 
 if __name__ == '__main__':

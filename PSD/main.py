@@ -174,7 +174,7 @@ def main(opt):
     wandb_init(opt, work_dir_exp)
     device_ids = [Id for Id in range(torch.cuda.device_count())]
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = load_model(opt.backbone, '/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model', device, device_ids)
+    net = load_model(opt.backbone, '/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model', device, device_ids, type='pretrain')
     opt_module = getattr(import_module("torch.optim") ,opt.optimizer) #default : AdamW
     optimizer = opt_module(params=net.parameters(), lr=opt.lr, weight_decay=opt.weight_decay) 
     train_data_loader = DataLoader(TrainData_label(opt.crop_size, opt.resize_size, opt.train_data_dir), batch_size=opt.train_batch_size, shuffle=True, num_workers=opt.num_workers, pin_memory=True, drop_last=True)
