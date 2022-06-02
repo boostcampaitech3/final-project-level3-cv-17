@@ -34,8 +34,7 @@ net.eval()
 test_data_dir = f'../data/{data}/hazy/'
 test_data_loader = DataLoader(ETCDataset(test_data_dir, backbone=backbone), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
 
-output_dir = '/opt/ml/input/final-project-level3-cv-17/PSD/output/'
-output_dir += model_path.split('/')[-2] +'/'+ model_path.split('/')[-1].split('.')[0] +'/'+ test_data_dir.split('/')[2] +'/'
+output_dir = 'output/' + model_path.split('/')[-2] +'/'+ model_path.split('/')[-1].split('.')[0] +'/'+ test_data_dir.split('/')[2] +'/'
 if not os.path.exists(output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
