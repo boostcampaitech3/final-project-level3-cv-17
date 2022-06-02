@@ -87,10 +87,6 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             unlabel_haze, unlabel_gt = unlabel_train_data
             label_haze, label_gt = label_haze.to(device), label_gt.to(device)
             unlabel_haze, unlabel_gt = unlabel_haze.to(device), unlabel_gt.to(device)
-            # print(f'>>> label_haze : {label_haze.shape}, label_gt : {label_gt.shape}, unlabel_haze : {unlabel_haze.shape}, unlabel_gt : {unlabel_gt.shape}')
-            if b_id == 0:
-                train_unlabel_imgs, train_unlabel_gts = train_unlabel_image_for_viz(unlabel_haze, unlabel_gt)
-                wandb.log({'train_unlabel_hazy_image':train_unlabel_imgs, 'train_unlabel_gt_image':train_unlabel_gts}, commit=False)
 
             optimizer.zero_grad()
             net.train()
@@ -100,13 +96,6 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             out, J, T, A, I = net(unlabel_haze)
             out_o, J_o, _, _, _ = net_o(unlabel_haze)
             I2 = T * unlabel_gt + (1 - T) * A
-
-            finetune_out = torch.squeeze(J.clamp(0, 1).cpu())
-            backbone_out = torch.squeeze(J_o.clamp(0, 1).cpu())
-            # print(f'>>> out : {out.shape}, J : {J.shape}, I2 : {I2.shape}, finetune_out : {finetune_out.shape}, backbone_out : {backbone_out.shape}')
-            if b_id == 0:
-                batch_b_out_imgs, batch_f_out_imgs = train_pred_image_for_viz(finetune_out, backbone_out)
-                wandb.log({'train_unlabel_backbone_output':batch_b_out_imgs, 'train_unlabel_finetune_output':batch_f_out_imgs}, commit=False)
             
             # --- losses --- #
             energy_dc_loss = loss_dc(unlabel_haze, T)
@@ -141,6 +130,15 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
                 if I_I2_loss != 0: train_I_I2_loss += opt.lambda_I_I2*I_I2_loss.item()
             if opt.cr_loss_label:
                 if c_loss_haze_label != 0: train_label_contrast_loss += opt.lambda_cr*c_loss_haze_label.item()
+            
+            # if b_id == 0:
+            #     train_unlabel_haze = finetune_log_image(unlabel_haze, denorm=True)
+            #     train_unlabel_gt = finetune_log_image(unlabel_gt)
+            #     wandb.log({'train_unlabel_hazy_image':train_unlabel_haze, 'train_unlabel_gt_image':train_unlabel_gt}, commit=False)
+
+            #     backbone_unlabel_out = finetune_log_image(torch.squeeze(J_o))
+            #     finetune_unlabel_out = finetune_log_image(torch.squeeze(J))
+            #     wandb.log({'train_unlabel_backbone_output':backbone_unlabel_out, 'train_unlabel_finetune_output':finetune_unlabel_out}, commit=False)
 
             pbar.set_postfix(
                 Total_Loss=f" {train_loss/(b_id+1):.3f}", DCP_Loss=f" {train_DCP_loss/(b_id+1):.3f}", BCP_Loss=f" {train_BCP_loss/(b_id+1):.3f}",
@@ -181,11 +179,6 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
                 # print(f'>>> out : {out.shape}, out_J : {out_J.shape}, out_T.shape : {out_T.shape}, out_A.shape : {out_A.shape}, out_I.shape : {out_I.shape}')
                 # >>> out : torch.Size([1, 64, 416, 560]), out_J : torch.Size([1, 3, 416, 560]), out_T.shape : torch.Size([1, 1, 416, 560]), out_A.shape : torch.Size([1, 3, 1, 1]), out_I.shape : torch.Size([1, 3, 416, 560])
 
-                if (b_id+1) % 50 == 0:
-                    val_out = wandb.Image(torch.squeeze(out_J).permute(1,2,0).cpu().numpy())
-                    val_haze = wandb.Image(torch.squeeze(haze).permute(1,2,0).cpu().numpy())
-                    wandb.log({f'val_{str(b_id).zfill(3)}_out':val_out, f'val_{str(b_id).zfill(3)}_haze':val_haze}, commit=False)
-
                 # val_PSNR.extend( to_psnr(out_J, gt) )
                 # val_SSIM.extend( ssim(out_J, gt) )
                 val_PSNR_score += metric_PSNR(out_J, gt).item()
@@ -201,6 +194,11 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
                 avg_NIQE = val_NIQE_score/(b_id+1)
                 avg_BRIS = val_BRIS_score/(b_id+1)
                 avg_NIMA = val_NIMA_score/(b_id+1)
+
+                if (b_id+1) % 50 == 0:
+                    val_out = finetune_log_image(out_J)
+                    val_haze = finetune_log_image(haze, denorm=True)
+                    wandb.log({f'val_{str(b_id).zfill(3)}_out':val_out, f'val_{str(b_id).zfill(3)}_haze':val_haze}, commit=False)
                 
             pbar.set_postfix(
                 # Val_PSNR=f"{avg_PSNR:.3f}", Val_SSIM=f"{avg_SSIM:.3f}",

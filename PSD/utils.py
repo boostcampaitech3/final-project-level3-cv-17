@@ -1,4 +1,5 @@
 import os
+from pickle import FALSE
 import re
 import time
 import glob
@@ -295,28 +296,16 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def train_unlabel_image_for_viz(unlabel_haze, unlabel_gt):
-    train_unlabel_imgs = []
-    train_unlabel_gts = []
-    for train_unlabel_img, train_unlabel_gt in zip(unlabel_haze, unlabel_gt):
-        train_unlabel_img = train_unlabel_img.permute(1,2,0).cpu().numpy()
-        train_unlabel_gt = train_unlabel_gt.permute(1,2,0).cpu().numpy()
-        train_unlabel_imgs.append(wandb.Image(train_unlabel_img))
-        train_unlabel_gts.append(wandb.Image(train_unlabel_gt))
+def finetune_log_image(imgs, denorm=False):
+    img_list = []
+    for img in imgs.detach().cpu().numpy():
+        img = np.transpose(img, (1,2,0))
+        if denorm: img = (img * 0.5) + 0.5
+        img = np.clip(img, 0, 1)
+        img_list.append(wandb.Image(img))
     
-    return train_unlabel_imgs, train_unlabel_gts
+    return img_list
 
-
-def train_pred_image_for_viz(finetune_out, backbone_out):
-    batch_b_out_imgs = []
-    batch_f_out_imgs = []
-    for f_out, b_out in zip(finetune_out, backbone_out):
-        batch_b_out = b_out.detach().permute(1,2,0).cpu().numpy()
-        batch_f_out = f_out.detach().permute(1,2,0).cpu().numpy()
-        batch_b_out_imgs.append(wandb.Image(batch_b_out))
-        batch_f_out_imgs.append(wandb.Image(batch_f_out))
-    
-    return batch_b_out_imgs, batch_f_out_imgs
 
 def pretrain_val_pred_image_for_viz(haze_img, val_pred_img, gt):
     batch_haze_img = []
