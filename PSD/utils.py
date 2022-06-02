@@ -244,9 +244,10 @@ def load_model(backbone, model_dir, device, device_ids, type='finetune'):
         net = nn.DataParallel(net, device_ids=device_ids)
         if type=='pretrian':
             model_path = os.path.join(model_dir, 'dehazeformer-m.pth')
+            net.load_state_dict(torch.load(model_path)['state_dict'], strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
         elif type=='finetune':
             model_path = os.path.join(model_dir, 'PSD-Dehazeformer.pth') # Epoch39.pth
-        net.load_state_dict(torch.load(model_path)['state_dict'], strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
+            net.load_state_dict(torch.load(model_path), strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
 
     if backbone == 'DehazeFormer_b':
         net = dehazeformer_b()
