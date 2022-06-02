@@ -1,5 +1,4 @@
 import os
-import sys
 import random
 import numpy as np
 from PIL import Image
@@ -40,20 +39,6 @@ def resize_before_crop(haze_img, gt_img, resize_size, crop_size):
         elif width >= height:
             haze_img = haze_img.resize((int(260 * (width/height)), 260), Image.ANTIALIAS)
             gt_img = gt_img.resize((int(260 * (width/height)), 260), Image.ANTIALIAS)
-    
-    return haze_img, gt_img
-
-
-def valid_resize(haze_img, gt_img, min_size):
-    width, height = haze_img.size
-    
-    if width < min_size or height < min_size:
-        if width < height:
-            haze_img = haze_img.resize((min_size, int(min_size * (height/width))), Image.ANTIALIAS)
-            gt_img = gt_img.resize((min_size, int(min_size * (height/width))), Image.ANTIALIAS)
-        elif width >= height:
-            haze_img = haze_img.resize((int(min_size * (width/height)), min_size), Image.ANTIALIAS)
-            gt_img = gt_img.resize((int(min_size * (width/height)), min_size), Image.ANTIALIAS)
     
     return haze_img, gt_img
 
@@ -197,7 +182,6 @@ class ValData_label(torch.utils.data.Dataset):
         
         haze_img = Image.open(os.path.join(self.haze_dir,haze_name)).convert('RGB')
         gt_img = Image.open(os.path.join(self.gt_dir,gt_name)).convert('RGB')
-        # haze_img, gt_img = valid_resize(haze_img, gt_img, min_size=512)
 
         haze_reshaped = haze_img
         haze_reshaped = haze_reshaped.resize((512, 512), Image.ANTIALIAS)
@@ -220,28 +204,41 @@ class ValData_label(torch.utils.data.Dataset):
 
 
 class ETCDataset(torch.utils.data.Dataset):
-    def __init__(self, val_data_dir):
+    def __init__(self, val_data_dir, backbone):
         super().__init__()
 
         self.haze_dir = val_data_dir
         self.haze_names = sorted(list(os.walk(self.haze_dir))[0][2])
+        self.backbone = backbone
 
     def get_images(self, index):
         haze_name = self.haze_names[index]
-
         haze_img = Image.open(os.path.join(self.haze_dir,haze_name)).convert('RGB')
+
         haze_reshaped = haze_img
         haze_reshaped = haze_reshaped.resize((512, 512), Image.ANTIALIAS)
         
+        if self.backbone == 'Dehazeformer':
+            haze_img = self.test_resize(haze_img, max_size=3024)
+
         # --- Transform to tensor --- #
         transform_haze = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-        transform_gt = Compose([ToTensor()])
         haze = transform_haze(haze_img)
         haze_reshaped = transform_haze(haze_reshaped)
-        #haze_edge_data = edge_compute(haze)
-        #haze = torch.cat((haze, haze_edge_data), 0)
 
         return haze, haze_reshaped, haze_name
+
+    def test_resize(self, haze_img, max_size):
+        width, height = haze_img.size
+        
+        if width > max_size or height > max_size:
+            if width < height:
+                haze_img = haze_img.resize(( int(max_size*(width/height)), max_size ), Image.ANTIALIAS)
+            elif width >= height:
+                haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
+            width, height = haze_img.size
+
+        return haze_img
 
     def __getitem__(self, index):
         res = self.get_images(index)
