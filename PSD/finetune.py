@@ -138,10 +138,9 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
             if lwf_loss_label != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_label.item()
             if lwf_loss_unlabel != 0: train_LwF_loss += opt.lambda_lwf_sky*lwf_loss_unlabel.item()
             if opt.I_I2_loss:
-                if I_I2_loss != 0:
-                    train_I_I2_loss += opt.lambda_I_I2*I_I2_loss.item()
+                if I_I2_loss != 0: train_I_I2_loss += opt.lambda_I_I2*I_I2_loss.item()
             if opt.cr_loss_label:
-                if c_loss_haze_label != 0: train_label_contrast_loss += c_loss_haze_label.item()
+                if c_loss_haze_label != 0: train_label_contrast_loss += opt.lambda_cr*c_loss_haze_label.item()
 
             pbar.set_postfix(
                 Total_Loss=f" {train_loss/(b_id+1):.3f}", DCP_Loss=f" {train_DCP_loss/(b_id+1):.3f}", BCP_Loss=f" {train_BCP_loss/(b_id+1):.3f}",
