@@ -10,3 +10,8 @@ PSD/pretrained_model/
 PSD/wandb_setup.py
 
 data/
+
+SkyReplacement/Replacement/__pycache__
+SkyReplacement/Replacement/SkySelection/__pycache__
+SkyReplacement/SkySegmentation/__pycache__
+SkyReplacement/SkySegmentation/mmseg_config/__pycache__
