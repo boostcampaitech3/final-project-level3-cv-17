@@ -6,12 +6,12 @@ from utils import make_directory
 if __name__ == '__main__':
 
     data_list = [
-        'Crawling',
+        # 'Crawling',
         # 'Hidden',
-        # 'RESIDE_RTTS',
+        'RESIDE_RTTS',
         ]
 
-    clip_limit = 2
+    clip_limit = 1
     grid_size = 64
     folder_name = f'/gt_clahe_{clip_limit}_{grid_size}'
 

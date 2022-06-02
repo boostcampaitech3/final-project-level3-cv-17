@@ -19,6 +19,7 @@ from math import exp
 from models.GCA import GCANet
 from models.FFA import FFANet
 from models.MSBDN import MSBDNNet
+from models.dehazeformer import dehazeformer_m, dehazeformer_b
 
 from datasets.pretrain_datasets import TestData
 
@@ -236,6 +237,20 @@ def load_model(backbone, model_dir, device, device_ids):
         net = nn.DataParallel(net, device_ids=device_ids)
         model_path = os.path.join(model_dir, 'PSD-MSBDN')
         net.load_state_dict(torch.load(model_path))
+    
+    if backbone == 'DehazeFormer_m':
+        net = dehazeformer_m()
+        net.to(device)
+        net = nn.DataParallel(net, device_ids=device_ids)
+        model_path = os.path.join(model_dir, 'dehazeformer-m.pth')
+        net.load_state_dict(torch.load(model_path)['state_dict'], strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
+
+    if backbone == 'DehazeFormer_b':
+        net = dehazeformer_b()
+        net.to(device)
+        net = nn.DataParallel(net, device_ids=device_ids)
+        model_path = os.path.join(model_dir, 'dehazeformer-b.pth')
+        net.load_state_dict(torch.load(model_path)['state_dict'], strict=False) # strict=False로 지정하면 알아서 있는 key값만 가져와서 load
         
     return net
 
@@ -298,6 +313,37 @@ def train_pred_image_for_viz(finetune_out, backbone_out):
         batch_f_out_imgs.append(wandb.Image(batch_f_out))
     
     return batch_b_out_imgs, batch_f_out_imgs
+
+def pretrain_val_pred_image_for_viz(haze_img, val_pred_img, gt):
+    batch_haze_img = []
+    batch_val_pred_img = []
+    batch_gt = []
+    for h_out, vpout, gt_out in zip(haze_img, val_pred_img, gt):
+        vis_haze_img = h_out.detach().permute(1,2,0).cpu().numpy()
+        vis_val_pred_img = vpout.detach().permute(1,2,0).cpu().numpy()
+        vis_gt = gt_out.detach().permute(1,2,0).cpu().numpy()
+        batch_haze_img.append(wandb.Image(vis_haze_img))
+        batch_val_pred_img.append(wandb.Image(vis_val_pred_img))
+        batch_gt.append(wandb.Image(vis_gt))
+    
+    return batch_haze_img, batch_val_pred_img, batch_gt
+
+def pretrain_train_pred_image_for_viz(original_haze_img, reconstruct_haze_img, original_clear_img, pretrained_clear_img):
+    batch_ori_haze_imgs = []
+    batch_rec_haze_imgs = []
+    batch_ori_clear_imgs = []
+    batch_pretrained_clear_imgs = []
+    for ori_haze_out, rec_haze_out, ori_clr_out, pret_clr_out in zip(original_haze_img, reconstruct_haze_img, original_clear_img, pretrained_clear_img):
+        batch_ori_haze_out = ori_haze_out.detach().permute(1,2,0).cpu().numpy()
+        batch_rec_haze_out = rec_haze_out.detach().permute(1,2,0).cpu().numpy()
+        batch_ori_clr_outt = ori_clr_out.detach().permute(1,2,0).cpu().numpy()
+        batch_pret_clr_out = pret_clr_out.detach().permute(1,2,0).cpu().numpy()
+        batch_ori_haze_imgs.append(wandb.Image(batch_ori_haze_out))
+        batch_rec_haze_imgs.append(wandb.Image(batch_rec_haze_out))
+        batch_ori_clear_imgs.append(wandb.Image(batch_ori_clr_outt))
+        batch_pretrained_clear_imgs.append(wandb.Image(batch_pret_clr_out))
+    
+    return batch_ori_haze_imgs, batch_rec_haze_imgs, batch_ori_clear_imgs, batch_pretrained_clear_imgs
 
 
 def update_best_info(best_path, best_score, best_epoch, val_score, val_epoch, metric, minmax, work_dir_exp, net):
