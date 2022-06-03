@@ -237,7 +237,12 @@ class ETCDataset(torch.utils.data.Dataset):
                 haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
             width, height = haze_img.size
         
-        haze_img = haze_img.resize((width + 16 - width%16, height + 16 - height%16), Image.ANTIALIAS)
+        if width%16 != 0 and height%16 != 0:
+            haze_img = haze_img.resize((width + 16 - width%16, height + 16 - height%16), Image.ANTIALIAS)
+        elif width%16 != 0:
+            haze_img = haze_img.resize((width + 16 - width%16, height), Image.ANTIALIAS)
+        elif height%16 != 0:
+            haze_img = haze_img.resize((width, height + 16 - height%16), Image.ANTIALIAS)
         
         return haze_img
 
