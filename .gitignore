@@ -21,8 +21,10 @@ PSD/pretrained_model/PSD-FFANET
 PSD/pretrained_model/PSD-GCANET
 PSD/pretrained_model/PSD-MSBDN
 
-serving/fastapi/app/__pycache__
-serving/fastapi/app/db/__pycache__
+serving/app/__pycache__
+serving/app/db/__pycache__
+serving/app/models/__pycache__
+serving/app/weights/
 
 data/sample/
 data/BeDDE/gt/
