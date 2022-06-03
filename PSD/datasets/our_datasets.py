@@ -217,15 +217,8 @@ class ETCDataset(torch.utils.data.Dataset):
 
         haze_reshaped = haze_img
         haze_reshaped = haze_reshaped.resize((512, 512), Image.ANTIALIAS)
-        
-        if self.backbone in ['Dehazeformer']:
-            haze_img = self.test_resize(haze_img, max_size=3024)
 
-        # if self.backbone in ['MSBDN','Dehazeformer']:
-        #     haze_img = self.test_resize(haze_img, max_size=1920)
-        
-        if self.backbone in ['MSBDN','Dehazeformer']:
-            haze_img = self.check_size(haze_img)
+        haze_img = self.test_resize(haze_img, max_size=1920)
 
         # --- Transform to tensor --- #
         transform_haze = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -242,13 +235,10 @@ class ETCDataset(torch.utils.data.Dataset):
                 haze_img = haze_img.resize(( int(max_size*(width/height)), max_size ), Image.ANTIALIAS)
             elif width >= height:
                 haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
-
-        return haze_img
-    
-    def check_size(self, haze_img):
-        width, height = haze_img.size
+            width, height = haze_img.size
+        
         haze_img = haze_img.resize((width + 16 - width%16, height + 16 - height%16), Image.ANTIALIAS)
-
+        
         return haze_img
 
     def __getitem__(self, index):

@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 device_ids = [Id for Id in range(torch.cuda.device_count())]
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-backbone = 'MSBDN' # FFA / MSBDN / Dehazeformer
+backbone = 'Dehazeformer' # FFA / MSBDN / Dehazeformer
 data = 'Hidden' # Crawling / Hidden
 
 if backbone=='FFA' : net = FFANet(3, 19)
@@ -41,6 +41,7 @@ if not os.path.exists(output_dir):
 
 with torch.no_grad():
     for id, test_data in enumerate(test_data_loader):
+        # start = time.time()
         haze, haze_A, name = test_data
         haze, haze_A = haze.to(device), haze_A.to(device)
         
@@ -49,3 +50,4 @@ with torch.no_grad():
 
         file_name = output_dir + name[0].split('.')[0] + name[0][-4:]
         vutils.save_image(ts, file_name)
+        # print(time.time() - start)
