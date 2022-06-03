@@ -139,30 +139,23 @@ def replace_sky(dehazed_image, sky_mask, sky):
     sz = dehazed_image.shape
 
     # 1) color transfer
-    # replace the sky
-    # I_rep = replace.replace_sky(dehazed_image, sky_mask, sky)
+    I_rep = replace.replace_sky(dehazed_image, sky_mask, sky) # replace the sky
+    transfer = replace.color_transfer(sky,sky_mask,I_rep,1) # color transfer
 
-    # color transfer
-    # transfer = replace.color_transfer(sky,sky_mask,I_rep,1)
-    
-    # final = Image.fromarray(transfer)
+    # 2) histogram matching 
+    # matched_dehazed_image = match_histograms(dehazed_image, sky, channel_axis=-1) # histogram matching
+    # I_rep = replace.replace_sky(matched_dehazed_image, sky_mask, sky) # replace the sky
 
-    # 2) histogram matching
-    matched_dehazed_image = match_histograms(dehazed_image, sky, channel_axis=-1)
-    matched_dehazed_image = np.clip(matched_dehazed_image, 0, 255).astype(np.uint8)
-
-    # # replace the sky
-    I_rep = replace.replace_sky(matched_dehazed_image, sky_mask, sky)
-
-    mask_grad = np.array(Image.open('/opt/ml/input/final-project-level3-cv-17/data/gray_gradient_v7.jpg').resize(dehazed_image.shape[1::-1], Image.BILINEAR))
+    # 그라데이션
+    mask_grad = np.array(Image.open('/opt/ml/input/final-project-level3-cv-17/data/gray_gradient/gray_gradient_v7.jpg').resize(dehazed_image.shape[1::-1], Image.BILINEAR))
     mask_grad = mask_grad / 255
-    final = dehazed_image * mask_grad + I_rep * (1 - mask_grad)  # transfer, I_rep
+    final = dehazed_image * mask_grad + transfer * (1 - mask_grad)  # 1) transfer / 2) I_rep
     final = np.clip(final, 0, 255).astype(np.uint8)
-    final = Image.fromarray(final)
-
-    # mask_edge=cv2.Canny(sky_mask,100,200)
-    # mask_edge_hwc=cv2.merge([mask_edge, mask_edge, mask_edge])
+    
+    # mask_edge = cv2.Canny(sky_mask,100,200)
+    # mask_edge_hwc = cv2.merge([mask_edge, mask_edge, mask_edge])
     # guided filtering
-    # final =replace.guideFilter(img,transfer,mask_edge_hwc,(3,3),0.00000001)
+    # final = replace.guideFilter(img,transfer,mask_edge_hwc,(3,3),0.00000001)
     # final = cv2.cvtColor(final, cv2.COLOR_RGB2BGR)
+    final = Image.fromarray(final)
     return final

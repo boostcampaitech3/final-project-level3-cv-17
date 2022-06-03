@@ -1,6 +1,7 @@
 import io
 import os
 import time
+import numpy as np
 from pathlib import Path
 
 import requests
@@ -8,6 +9,7 @@ from PIL import Image
 
 import streamlit as st
 from app.confirm_button_hack import cache_on_button_press
+
 
 # SETTING PAGE CONFIG TO WIDE MODE
 ASSETS_DIR_PATH = os.path.join(Path(__file__).parent.parent.parent.parent, "assets")
@@ -93,7 +95,18 @@ def save_btn_click(option, bytes):
 
     st.write(f"{cloud_option}으로 다운로드")
     db_save(cloud_option, files)
-    
+
+def test_resize(haze_img, max_size):
+    width, height = haze_img.size
+    if width > max_size or height > max_size:
+        if width < height:
+            haze_img = haze_img.resize(( int(max_size*(width/height)), max_size ), Image.ANTIALIAS)
+        elif width >= height:
+            haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
+        width, height = haze_img.size
+        if width % 16 != 0 or height % 16 != 0:
+            haze_img = haze_img.resize((width + 16 - width % 16, height + 16 - height % 16))
+    return haze_img
 
 def main():
     # print('main')
@@ -105,6 +118,10 @@ def main():
         
         image_bytes = uploaded_file.getvalue()
         image = Image.open(io.BytesIO(image_bytes))
+        
+        # Image Resize
+        image = test_resize(image, 3024)
+        image_bytes = image_to_bytes(image)
     
         ### 상단 부분
         with st.container():
