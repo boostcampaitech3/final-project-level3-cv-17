@@ -204,12 +204,13 @@ class ValData_label(torch.utils.data.Dataset):
 
 
 class ETCDataset(torch.utils.data.Dataset):
-    def __init__(self, val_data_dir, backbone):
+    def __init__(self, val_data_dir, backbone, max_size):
         super().__init__()
 
         self.haze_dir = val_data_dir
         self.haze_names = sorted(list(os.walk(self.haze_dir))[0][2])
         self.backbone = backbone
+        self.max_size = max_size
 
     def get_images(self, index):
         haze_name = self.haze_names[index]
@@ -218,7 +219,7 @@ class ETCDataset(torch.utils.data.Dataset):
         haze_reshaped = haze_img
         haze_reshaped = haze_reshaped.resize((512, 512), Image.ANTIALIAS)
 
-        haze_img = self.test_resize(haze_img, max_size=1920)
+        haze_img = self.test_resize(haze_img)
 
         # --- Transform to tensor --- #
         transform_haze = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -227,7 +228,8 @@ class ETCDataset(torch.utils.data.Dataset):
 
         return haze, haze_reshaped, haze_name
 
-    def test_resize(self, haze_img, max_size):
+    def test_resize(self, haze_img):
+        max_size = self.max_size
         width, height = haze_img.size
         
         if width > max_size or height > max_size:

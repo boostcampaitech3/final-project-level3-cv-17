@@ -20,6 +20,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 backbone = 'Dehazeformer' # FFA / MSBDN / Dehazeformer
 data = 'Hidden' # Crawling / Hidden
+max_size = 3024
 
 if backbone=='FFA' : net = FFANet(3, 19)
 elif backbone=='MSBDN' : net = MSBDNNet()
@@ -27,13 +28,13 @@ elif backbone=='Dehazeformer' : net = dehazeformer_m()
 net = nn.DataParallel(net, device_ids=device_ids)
 
 if backbone=='FFA' : model_path = 'pretrained_model/PSD-FFANET'
-elif backbone=='MSBDN' : model_path = 'pretrained_model/PSD-MSBDN' # pretrained_model/PSD-MSBDN # /opt/ml/input/final-project-level3-cv-17/PSD/ABTest/exp25epoch10.pth
-elif backbone=='Dehazeformer' : model_path = 'pretrained_model/PSD-Dehazeformer.pth' # pretrained_model/PSD-Dehazeformer.pth # /opt/ml/input/final-project-level3-cv-17/PSD/ABTest/finetune.pth
+elif backbone=='MSBDN' : model_path = 'pretrained_model/PSD-MSBDN' # pretrained_model/PSD-MSBDN # pretrained_model/exp25epoch10.pth
+elif backbone=='Dehazeformer' : model_path = 'pretrained_model/PSD-Dehazeformer.pth' # pretrained_model/PSD-Dehazeformer.pth # pretrained_model/finetune.pth
 net.load_state_dict(torch.load(model_path))
 net.eval()
 
 test_data_dir = f'../data/{data}/hazy/'
-test_data_loader = DataLoader(ETCDataset(test_data_dir, backbone=backbone), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
+test_data_loader = DataLoader(ETCDataset(test_data_dir, backbone, max_size), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
 
 output_dir = 'output/' + model_path.split('/')[-2] +'/'+ model_path.split('/')[-1].split('.')[0] +'/'+ test_data_dir.split('/')[2] +'/'
 if not os.path.exists(output_dir):
