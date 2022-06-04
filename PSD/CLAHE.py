@@ -12,7 +12,7 @@ if __name__ == '__main__':
     data_path = '/opt/ml/input/final-project-level3-cv-17/PSD/output/ABTest/finetune/Hidden/'
     weight_name = data_path.split('/')[-3]
     data_name = data_path.split('/')[-2]
-    out_path = f'clahe/{weight_name}_{data_name}/{clip_limit}_{grid_size}'
+    out_path = f'clahe/{weight_name}/{data_name}/{clip_limit}_{grid_size}'
     make_directory(out_path)
 
     name_list = sorted(list(os.walk(data_path))[0][2])
