@@ -98,19 +98,26 @@ def save_btn_click(option, bytes):
 
 def test_resize(haze_img, max_size):
     width, height = haze_img.size
+    
     if width > max_size or height > max_size:
         if width < height:
             haze_img = haze_img.resize(( int(max_size*(width/height)), max_size ), Image.ANTIALIAS)
         elif width >= height:
             haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
         width, height = haze_img.size
-        if width % 16 != 0 or height % 16 != 0:
-            haze_img = haze_img.resize((width + 16 - width % 16, height + 16 - height % 16))
+    
+    if width%16 != 0 and height%16 != 0:
+        haze_img = haze_img.resize((width + 16 - width%16, height + 16 - height%16), Image.ANTIALIAS)
+    elif width%16 != 0:
+        haze_img = haze_img.resize((width + 16 - width%16, height), Image.ANTIALIAS)
+    elif height%16 != 0:
+        haze_img = haze_img.resize((width, height + 16 - height%16), Image.ANTIALIAS)
+    
     return haze_img
 
 def main():
     # print('main')
-    st.title("Dehazing Model")
+    st.title("Dehazing & Sky Replacement")
 
     uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg","png"])
 
@@ -220,7 +227,7 @@ def main():
                     
                     with col3:
                         st.header('After Cloud Generate')
-
+                        st.image(segment)
                         ### 위에서 api response를 받은 sky_replace를 여기서 웹에 출력한다.
                         st.image(sky_replace, caption='Sky Replacement 이미지')
                         ### 이미지 다운로드와 함께 request를 날림 -> app.post('/save')
@@ -242,14 +249,20 @@ def main():
     # 이미지를 업로드하면 사라지게 된다.
     else:
         with st.container():
-            st.header('예시 사진')
-            col0, col1, col2, col3 = st.columns([1,2,2,1])
+            st.header('')
+            col0, col1, col2, col3, col4, col5 = st.columns([0.5,2,2,2,2,0.5])
             with col1:
-                st.header("Before Dehazing")
-                st.image("/opt/ml/input/data/Hidden/hazy/001_baek.jpg")
+                st.header("Input Image")
+                st.image("/opt/ml/input/data/Example/input_image.jpg")
             with col2:
                 st.header("After Dehazing")
-                st.image("/opt/ml/input/data/Hidden/gt/001_baek.jpeg")
+                st.image("/opt/ml/input/data/Example/dehazed_image.jpg")
+            with col3:
+                st.header("Sky Selection")
+                st.image("/opt/ml/input/data/Example/selected_sky.jpeg")
+            with col4:
+                st.header("Replacement")
+                st.image("/opt/ml/input/data/Example/dehazed_cloud_image.jpg")
 
 
 main()
