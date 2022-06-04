@@ -147,7 +147,7 @@ def replace_sky(dehazed_image, sky_mask, sky):
     # I_rep = replace.replace_sky(matched_dehazed_image, sky_mask, sky) # replace the sky
 
     # 그라데이션
-    mask_grad = np.array(Image.open('/opt/ml/input/final-project-level3-cv-17/data/gray_gradient/gray_gradient_v7.jpg').resize(dehazed_image.shape[1::-1], Image.BILINEAR))
+    mask_grad = np.array(Image.open('/opt/ml/input/final-project-level3-cv-17/data/gray_gradient/gray_gradient_v.jpg').resize(dehazed_image.shape[1::-1], Image.BILINEAR))
     mask_grad = mask_grad / 255
     final = dehazed_image * mask_grad + transfer * (1 - mask_grad)  # 1) transfer / 2) I_rep
     final = np.clip(final, 0, 255).astype(np.uint8)
