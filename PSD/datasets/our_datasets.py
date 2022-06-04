@@ -204,7 +204,7 @@ class ValData_label(torch.utils.data.Dataset):
 
 
 class ETCDataset(torch.utils.data.Dataset):
-    def __init__(self, val_data_dir, backbone, min_size, max_size):
+    def __init__(self, val_data_dir, backbone, min_size, max_size, check_size):
         super().__init__()
 
         self.haze_dir = val_data_dir
@@ -212,6 +212,7 @@ class ETCDataset(torch.utils.data.Dataset):
         self.backbone = backbone
         self.min_size = min_size
         self.max_size = max_size
+        self.check_size = check_size
 
     def get_images(self, index):
         haze_name = self.haze_names[index]
@@ -229,9 +230,8 @@ class ETCDataset(torch.utils.data.Dataset):
 
         return haze, haze_reshaped, haze_name
     
-    def test_resize(self, haze_img, min_size, max_size):
+    def test_resize(haze_img, min_size, max_size, check_size):
         width, height = haze_img.size
-        print("start:", haze_img.size)
 
         if width < min_size or height < min_size:
             if width < height:
@@ -239,7 +239,6 @@ class ETCDataset(torch.utils.data.Dataset):
             elif width >= height:
                 haze_img = haze_img.resize(( int(min_size*(width/height)), min_size ), Image.ANTIALIAS)
             width, height = haze_img.size
-        print("after min:", haze_img.size)
         
         if width > max_size or height > max_size:
             if width < height:
@@ -247,15 +246,13 @@ class ETCDataset(torch.utils.data.Dataset):
             elif width >= height:
                 haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
             width, height = haze_img.size
-        print("after max:", haze_img.size)
         
-        if width % 16 != 0 and height % 16 != 0:
-            haze_img = haze_img.resize((width + 16 - width%16, height + 16 - height%16), Image.ANTIALIAS)
-        elif width % 16 != 0:
-            haze_img = haze_img.resize((width + 16 - width%16, height), Image.ANTIALIAS)
-        elif height % 16 != 0:
-            haze_img = haze_img.resize((width, height + 16 - height%16), Image.ANTIALIAS)
-        print("after 16:", haze_img.size)
+        if width % check_size != 0 and height % check_size != 0:
+            haze_img = haze_img.resize((width - width%check_size, height - height%check_size), Image.ANTIALIAS)
+        elif width % check_size != 0:
+            haze_img = haze_img.resize((width - width%check_size, height), Image.ANTIALIAS)
+        elif height % check_size != 0:
+            haze_img = haze_img.resize((width, height - height%check_size), Image.ANTIALIAS)
 
         return haze_img
 

@@ -22,6 +22,7 @@ backbone = 'Dehazeformer' # FFA / MSBDN / Dehazeformer
 data = 'Hidden' # Crawling / Hidden
 min_size = 512
 max_size = 3024
+check_size = 16
 
 if backbone=='FFA' : net = FFANet(3, 19)
 elif backbone=='MSBDN' : net = MSBDNNet()
@@ -35,7 +36,7 @@ net.load_state_dict(torch.load(model_path))
 net.eval()
 
 test_data_dir = f'../data/{data}/hazy/'
-test_data_loader = DataLoader(ETCDataset(test_data_dir, backbone, min_size, max_size), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
+test_data_loader = DataLoader(ETCDataset(test_data_dir, backbone, min_size, max_size, check_size), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
 
 output_dir = 'output/' + model_path.split('/')[-2] +'/'+ model_path.split('/')[-1].split('.')[0] +'/'+ test_data_dir.split('/')[2] +'/'
 if not os.path.exists(output_dir):
