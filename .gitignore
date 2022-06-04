@@ -8,6 +8,7 @@ PSD/wandb/
 PSD/work_dirs/
 PSD/pretrained_model/
 PSD/wandb_setup.py
+PSD/clahe/
 
 data/
 
