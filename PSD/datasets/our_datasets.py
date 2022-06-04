@@ -220,8 +220,10 @@ class ETCDataset(torch.utils.data.Dataset):
 
         haze_reshaped = haze_img
         haze_reshaped = haze_reshaped.resize((512, 512), Image.ANTIALIAS)
-
-        haze_img = self.test_resize(haze_img, self.min_size, self.max_size)
+        
+        haze_img = self.clip_min_size(haze_img, self.min_size)
+        haze_img = self.clip_max_size(haze_img, self.max_size)
+        haze_img = self.clip_check_size(haze_img, self.check_size)
 
         # --- Transform to tensor --- #
         transform_haze = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -230,7 +232,7 @@ class ETCDataset(torch.utils.data.Dataset):
 
         return haze, haze_reshaped, haze_name
     
-    def test_resize(haze_img, min_size, max_size, check_size):
+    def clip_min_size(self, haze_img, min_size):
         width, height = haze_img.size
 
         if width < min_size or height < min_size:
@@ -239,7 +241,12 @@ class ETCDataset(torch.utils.data.Dataset):
             elif width >= height:
                 haze_img = haze_img.resize(( int(min_size*(width/height)), min_size ), Image.ANTIALIAS)
             width, height = haze_img.size
-        
+
+        return haze_img
+    
+    def clip_max_size(self, haze_img, max_size):
+        width, height = haze_img.size
+
         if width > max_size or height > max_size:
             if width < height:
                 haze_img = haze_img.resize(( int(max_size*(width/height)), max_size ), Image.ANTIALIAS)
@@ -247,12 +254,13 @@ class ETCDataset(torch.utils.data.Dataset):
                 haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
             width, height = haze_img.size
         
-        if width % check_size != 0 and height % check_size != 0:
+        return haze_img
+    
+    def clip_check_size(self, haze_img, check_size):
+        width, height = haze_img.size
+
+        if width % check_size != 0 or height % check_size != 0:
             haze_img = haze_img.resize((width - width%check_size, height - height%check_size), Image.ANTIALIAS)
-        elif width % check_size != 0:
-            haze_img = haze_img.resize((width - width%check_size, height), Image.ANTIALIAS)
-        elif height % check_size != 0:
-            haze_img = haze_img.resize((width, height - height%check_size), Image.ANTIALIAS)
 
         return haze_img
 

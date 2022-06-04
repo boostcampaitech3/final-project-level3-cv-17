@@ -18,10 +18,10 @@ warnings.filterwarnings("ignore")
 device_ids = [Id for Id in range(torch.cuda.device_count())]
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-backbone = 'Dehazeformer' # FFA / MSBDN / Dehazeformer
+backbone = 'MSBDN' # FFA / MSBDN / Dehazeformer
 data = 'Hidden' # Crawling / Hidden
 min_size = 512
-max_size = 3024
+max_size = 2560
 check_size = 16
 
 if backbone=='FFA' : net = FFANet(3, 19)
