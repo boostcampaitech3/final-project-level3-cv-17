@@ -48,7 +48,7 @@ def get_parser():
     parser.add_argument('--decay_step', type=float, default=2)
     parser.add_argument('--lr_decay', type=float, default=0.8)
 
-    parser.add_argument('--I_I2_loss', action='store_true', default=True)
+    parser.add_argument('--I_I2_loss', action='store_true', default=False)
     parser.add_argument('--lambda_I_I2', type=float, default=1)
     parser.add_argument('--cr_loss_label', action='store_true', default=False)
     parser.add_argument('--lambda_cr', type=float, default=0)
