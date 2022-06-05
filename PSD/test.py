@@ -36,7 +36,7 @@ net.load_state_dict(torch.load(model_path))
 net.eval()
 
 test_data_dir = f'../data/{data}/hazy/'
-test_data_loader = DataLoader(ETCDataset(test_data_dir, backbone, min_size, max_size, check_size), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
+test_data_loader = DataLoader(ETCDataset(test_data_dir, min_size, max_size, check_size), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
 
 output_dir = 'output/' + model_path.split('/')[-2] +'/'+ model_path.split('/')[-1].split('.')[0] +'/'+ test_data_dir.split('/')[2] +'/'
 if not os.path.exists(output_dir):
