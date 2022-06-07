@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from datasets.our_datasets import TrainData_label, ValData_label
-from utils import to_psnr, increment_path, make_directory, load_model, pretrain_train_pred_image_for_viz, ssim, pretrain_val_pred_image_for_viz, set_seed
+from utils import *
 import math
 from wandb_setup import wandb_login, wandb_init
 from importlib import import_module
@@ -13,6 +13,7 @@ from tqdm import tqdm
 import wandb
 import warnings
 from CR import *
+import pyiqa
 warnings.filterwarnings("ignore")
 #from perceptual import LossNetwork
 
@@ -40,7 +41,7 @@ def get_parser():
     parser.add_argument('--work_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/PSD/work_dirs')
     parser.add_argument('--train_data_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/data/RESIDE-OTS')
     parser.add_argument('--val_data_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/data/RESIDE_SOTS_OUT')
-    parser.add_argument('--pretrain_model_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model')
+    parser.add_argument('--pretrain_model_dir', type=str, default='/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model/backbone')
 
     parser.add_argument('--optimizer', type=str, default='AdamW', help='Enter optimizer')
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='Enter weight decay')
@@ -49,9 +50,11 @@ def get_parser():
     opt = parser.parse_known_args()[0]
     return opt
 
-def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimizer, net, criterion):
-    best_PSNR, best_PSNR_epoch = 0.0, 0
-    best_SSIM, best_SSIM_epoch = 0.0, 0
+def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimizer, net, criterion, metric_PSNR, metric_SSIM, metric_NIQE, metric_BRIS, metric_NIMA):
+    best_PSNR, best_SSIM, best_NIQE, best_BRIS, best_NIMA = 0.0, 0.0, 999999.0, 999999.0, 0.0
+    best_PSNR_epoch, best_SSIM_epoch, best_NIQE_epoch, best_BRIS_epoch, best_NIMA_epoch = 0, 0, 0, 0, 0
+    best_PSNR_path, best_SSIM_path, best_NIQE_path, best_BRIS_path, best_NIMA_path = '', '', '', '', ''
+
     for epoch in range(opt.num_epochs):
         torch.cuda.empty_cache()
         net.train()
@@ -60,6 +63,7 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimiz
         train_PSNR = []
         train_rec_loss1, train_rec_loss2, train_vgg_loss, train_total_loss = 0., 0., 0., 0.
         pbar = tqdm(train_data_loader, total=len(train_data_loader), desc=f"[Epoch {epoch+1}] Train")
+        start_time = time.time()
         fin_bid = 0
         for batch_id, train_data in enumerate(pbar):
             if batch_id > 5000:
@@ -86,7 +90,7 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimiz
             Rec_Loss1 = F.smooth_l1_loss(J, gt)
             Rec_Loss2 = F.smooth_l1_loss(I, haze)
             loss_vgg7 = criterion(J, gt, haze)
-            loss = Rec_Loss1 + Rec_Loss2 + loss_vgg7
+            loss = Rec_Loss1 + Rec_Loss2 + 0.1 * loss_vgg7
 
             loss.backward()
             optimizer.step()
@@ -118,6 +122,7 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimiz
         net.eval()
 
         val_PSNR, val_SSIM = [], []
+        val_PSNR_score, val_SSIM_score, val_NIQE_score, val_BRIS_score, val_NIMA_score = 0.0, 0.0, 0.0, 0.0, 0.0
         pbar = tqdm(val_data_loader, total=len(val_data_loader), desc=f"[Epoch {epoch+1}] Val")
         random_num = np.random.randint(0,len(val_data_loader))
         for b_id, val_data in enumerate(pbar):
@@ -138,35 +143,39 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimiz
                     hazy_img, val_pred_img, gt_img = pretrain_val_pred_image_for_viz(haze, out_J, gt)
                     wandb.log({'hazy_img' : hazy_img, 'val_pred_img':val_pred_img, 'gt' : gt_img}, commit=False)
 
-                val_PSNR.extend(to_psnr(out_J, gt))
-                val_SSIM.extend(ssim(out_J, gt))
-                avg_PSNR = sum(val_PSNR)/len(val_PSNR)
-                avg_SSIM = sum(val_SSIM)/len(val_SSIM)
+                val_PSNR_score += metric_PSNR(out_J, gt).item()
+                val_SSIM_score += metric_SSIM(out_J, gt).item()
+                val_NIQE_score += metric_NIQE(out_J).item()
+                val_BRIS_score += metric_BRIS(out_J).item()
+                val_NIMA_score += metric_NIMA(out_J).item()
 
-                
+                avg_PSNR_pyiqa = val_PSNR_score/(b_id+1)
+                avg_SSIM_pyiqa = val_SSIM_score/(b_id+1)
+                avg_NIQE = val_NIQE_score/(b_id+1)
+                avg_BRIS = val_BRIS_score/(b_id+1)
+                avg_NIMA = val_NIMA_score/(b_id+1)
+
             pbar.set_postfix(
-                Val_PSNR=f" {avg_PSNR:.3f}", Val_SSIM=f" {avg_SSIM:.3f}"
+                Val_PSNR_pyiqa=f"{avg_PSNR_pyiqa:.3f}", Val_SSIM_pyiqa=f"{avg_SSIM_pyiqa:.3f}", Val_NIQE=f"{avg_NIQE:.3f}", Val_BRIS=f"{avg_BRIS:.3f}", Val_NIMA=f"{avg_NIMA:.3f}",
                 )
 
         wandb.log({
-            'val/PSNR':avg_PSNR, 'val/SSIM':avg_SSIM,
+            # 'val/PSNR':avg_PSNR, 'val/SSIM':avg_SSIM,
+            'val/PSNR_pyiqa':avg_PSNR_pyiqa, 'val/SSIM_pyiqa':avg_SSIM_pyiqa, 'val/NIQE':avg_NIQE, 'val/BRIS':avg_BRIS, 'val/NIMA':avg_NIMA, 'val_run_time':time.time() - start_time,
             })
-        if best_PSNR < avg_PSNR:
-            best_PSNR, best_PSNR_epoch = avg_PSNR, epoch
-            best_PSNR_path = os.path.join(work_dir_exp, 'best_PSNR.pth')
-            torch.save(net.state_dict(), best_PSNR_path)
-        if best_SSIM < avg_SSIM:
-            best_SSIM, best_SSIM_epoch = avg_SSIM, epoch
-            best_SSIM_path = os.path.join(work_dir_exp, 'best_SSIM.pth')
-            torch.save(net.state_dict(), best_SSIM_path)
-        if epoch == opt.num_epochs:
-            new_best_PSNR_path = best_PSNR_path[:-4] + f"_epoch{best_PSNR_epoch}.pth"
-            new_best_SSIM_path = best_SSIM_path[:-4] + f"_epoch{best_SSIM_epoch}.pth"
-            os.rename(best_PSNR_path, new_best_PSNR_path)
-            os.rename(best_SSIM_path, new_best_SSIM_path)
-            last_epoch_path = os.path.join(work_dir_exp, f'epoch{epoch}.pth')
+        best_PSNR_path, best_PSNR, best_PSNR_epoch = update_best_info(best_PSNR_path, best_PSNR, best_PSNR_epoch, avg_PSNR_pyiqa, epoch, 'PSNR', 'max', work_dir_exp, net)
+        best_SSIM_path, best_SSIM, best_SSIM_epoch = update_best_info(best_SSIM_path, best_SSIM, best_SSIM_epoch, avg_SSIM_pyiqa, epoch, 'SSIM', 'max', work_dir_exp, net)
+        best_NIQE_path, best_NIQE, best_NIQE_epoch = update_best_info(best_NIQE_path, best_NIQE, best_NIQE_epoch, avg_NIQE, epoch, 'NIQE', 'min', work_dir_exp, net)
+        best_BRIS_path, best_BRIS, best_BRIS_epoch = update_best_info(best_BRIS_path, best_BRIS, best_BRIS_epoch, avg_BRIS, epoch, 'BRIS', 'min', work_dir_exp, net)
+        best_NIMA_path, best_NIMA, best_NIMA_epoch = update_best_info(best_NIMA_path, best_NIMA, best_NIMA_epoch, avg_NIMA, epoch, 'NIMA', 'max', work_dir_exp, net)
+        if epoch+1 == opt.num_epochs:
+            update_save_epoch(best_PSNR_path, best_PSNR_epoch)
+            update_save_epoch(best_SSIM_path, best_SSIM_epoch)
+            update_save_epoch(best_NIQE_path, best_NIQE_epoch)
+            update_save_epoch(best_BRIS_path, best_BRIS_epoch)
+            update_save_epoch(best_NIMA_path, best_NIMA_epoch)
+            last_epoch_path = os.path.join(work_dir_exp, f'epoch{epoch+1}.pth')
             torch.save(net.state_dict(), last_epoch_path)
-
 
 def main(opt):
     work_dir_exp = increment_path(os.path.join(opt.work_dir, 'exp'))
@@ -174,15 +183,20 @@ def main(opt):
     wandb_init(opt, work_dir_exp)
     device_ids = [Id for Id in range(torch.cuda.device_count())]
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = load_model(opt.backbone, '/opt/ml/input/final-project-level3-cv-17/PSD/pretrained_model', device, device_ids, type='pretrain')
+    net = load_model(opt.backbone, opt.pretrain_model_dir, device, device_ids, type='pretrain')
     opt_module = getattr(import_module("torch.optim") ,opt.optimizer) #default : AdamW
     optimizer = opt_module(params=net.parameters(), lr=opt.lr, weight_decay=opt.weight_decay) 
+    metric_PSNR = pyiqa.create_metric('psnr').to(device)
+    metric_SSIM = pyiqa.create_metric('ssim').to(device)
+    metric_NIQE = pyiqa.create_metric('niqe').to(device)
+    metric_BRIS = pyiqa.create_metric('brisque').to(device)
+    metric_NIMA = pyiqa.create_metric('nima').to(device)
     train_data_loader = DataLoader(TrainData_label(opt.crop_size, opt.resize_size, opt.train_data_dir), batch_size=opt.train_batch_size, shuffle=True, num_workers=opt.num_workers, pin_memory=True, drop_last=True)
     val_data_loader = DataLoader(ValData_label(opt.val_data_dir), batch_size=opt.val_batch_size, shuffle=False, pin_memory=True, num_workers=opt.num_workers, drop_last=True)
     print(">>> DATALOADER DONE!")
     torch.backends.cudnn.benchmark = True
     criterion = ContrastLoss()
-    train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimizer, net, criterion)
+    train(opt, work_dir_exp, device, train_data_loader, val_data_loader, optimizer, net, criterion, metric_PSNR, metric_SSIM, metric_NIQE, metric_BRIS, metric_NIMA)
 
 
 
