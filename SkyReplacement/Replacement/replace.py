@@ -17,9 +17,7 @@ def find_max_sky_rect(mask):
 	index= np.array(index,dtype=int)
 	y=index[0,:]
 	x=index[1,:]
-	# 추출된 이미지의 mask가 전부 00이 될 경우
-	# 1.png의 경우 filter base로 추출하면 전부 0이 나옴.
-	# 그럴 경우 오류 발생
+
 	c2=np.min(x)
 	c1=np.max(x)
 	r2=np.min(y)
@@ -40,76 +38,36 @@ def replace_sky(img,img_mask,ref,ref_mask):
 			if(img_mask[i,j].any()):
 				I_rep[i,j,:] = sky_resize[i,j,:]
 	return I_rep
-# def replace_sky(img,img_mask,ref,ref_mask):
-
-# 	# rect mask filtering
-# 	y2,x2,y1,x1=find_min_sky_rect(ref_mask)
-# 	print(y2,x2,y1,x1)
-# 	# 이 min조건을 단순히 거는게 아니라 이걸 걸어서 0이 되거나
-# 	# treshold를 못넘으면 제거되게 하면 되겠다.
-# 	roi = ref[y1:y2, x1:x2]
-
-# 	r1,c1,r2,c2=find_max_sky_rect(img_mask)
-# 	height=r1-r2+1
-# 	width=c1-c2+1
-
-# 	sky_resize = cv2.resize(roi, (width, height))
-
-# 	I_rep=img.copy()
-# 	sz=img.shape
-
-# 	for i in range(sz[0]):
-# 			for j in range(sz[1]):
-# 				if(img_mask[i,j].any()):
-# 					I_rep[i,j,:] = sky_resize[i-r2,j-c2,:]
-# 	return I_rep
 
 def guideFilter(I, p, mask_edge, winSize, eps):	#input p,giude I
     
 	I=I/255.0
 	p=p/255.0
 	mask_edge=mask_edge/255.0
-	print(mask_edge)
-	#I的均值平滑
+
 	mean_I = cv2.blur(I, winSize)
     
-    #p的均值平滑
 	mean_p = cv2.blur(p, winSize)
     
-    #I*I和I*p的均值平滑
 	mean_II = cv2.blur(I*I, winSize)
     
 	mean_Ip = cv2.blur(I*p, winSize)
     
-    #方差
-	var_I = mean_II - mean_I * mean_I#方差公式
+	var_I = mean_II - mean_I * mean_I
     
-    #协方差
 	cov_Ip = mean_Ip - mean_I * mean_p
    
 	a = cov_Ip / (var_I + eps)
 	b = mean_p - a*mean_I
     
-    #对a、b进行均值平滑
 	mean_a = cv2.blur(a, winSize)
 	mean_b = cv2.blur(b, winSize)
 
 	q=p.copy()
-	sz=mask_edge.shape
-	# edge=mask_edge.copy()
 	kernel=np.ones((5,5),np.uint8)
-	# kernel=np.array([[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]],np.uint8)
 	edge=cv2.dilate(mask_edge,kernel)
 
-
-	# edge8=edge*255
-	# edge8=edge8.astype(np.uint8)
-	# mask_edge8=mask_edge*255
-	# mask_edge8=mask_edge8.astype(np.uint8)
-	# cv2.imwrite('d:/MyLearning/DIP/Final_Project/Report/mask_edge.png',mask_edge8)
-	# cv2.imwrite('d:/MyLearning/DIP/Final_Project/Report/edge.png',edge8)
-
-	# sky_mask[edge==1]=0#mean_a[edge==1]*I[edge==1]+mean_b[edge==1]
+	q[edge==1]=mean_a[edge==1]*I[edge==1]+mean_b[edge==1]
 			
 	q = q*255
 	q[q>255] = 255

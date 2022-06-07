@@ -1,4 +1,5 @@
-from SkySegmentation.filter_seg import process_image_or_folder
+from SkySegmentation.filter_seg import find_hsv_upper_lower_threshold_for_skyarea_and_weather_condition
+from SkySegmentation.clear_edge import edge_mask,variance_filter
 from SkySegmentation.mmseg_config.utils import increment_jpg_path
 import argparse
 import time
@@ -17,28 +18,53 @@ import imutils
 from pykuwahara import kuwahara
 from skimage.exposure import match_histograms
 
-def edge_mask(mask):
-    mask = np.asarray(mask, dtype=np.double)
-    gx, gy = np.gradient(mask)
-    temp_edge = gy * gy + gx * gx
-    temp_edge[temp_edge >= 0.5] = 1.0
-    temp_edge[temp_edge < 0.5] = 0.0
-    temp_edge = np.asarray(temp_edge, dtype=np.uint8)
-    return temp_edge
-
-
 SKY_IMAGES_PATH = '/opt/ml/input/final-project-level3-cv-17/data/sky_images/database/img/*'
-def variance_filter(img_gray, window_size = 3): # osth treshold랑 비슷한 느낌인데
-    """
-    Variance filter
-    Calculate the variance in the sliding window
-    """
-    img_gray = img_gray.astype(np.float64)
-    # img_gray = cv2.Laplacian(img_gray,cv2.CV_8U,ksize=3)
-    # (cv2.sqrBoxFilter(x,-1,(window_size, window_size))for x in (img_gray, img_gray*img_gray))
-    # Variance calculate using vectorized operation. As using a 2d loop to slide the window is too time consuming.
-    wmean, wsqrmean = (cv2.boxFilter(x, -1, (window_size, window_size), borderType=cv2.BORDER_REPLICATE) for x in (img_gray, img_gray*img_gray))
-    return wsqrmean - wmean*wmean
+
+
+def model_prediction(img):
+    config_file = '/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/checkpoint/segformer_3.py'
+    checkpoint_file ='/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/mmseg_config/work_dirs/exp89/epoch_80.pth' #'/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/checkpoint/epoch_20.pth'
+    cfg = mmcv.Config.fromfile(config_file)
+    model = build_segmentor(cfg.model, test_cfg=cfg.get('test_cfg'))
+    model.cfg = cfg
+    model.to('cuda:0')
+    model.eval()
+    load_checkpoint(model, checkpoint_file, map_location='cpu')
+    model.CLASSES =("BackGroud","Sky")
+    result = inference_segmentor(model, img)
+    sky_mask = result[0].astype(np.uint8)  
+    return sky_mask
+
+def blue_channel_filter(img):
+    img_b = img[:,:,2]#clahe.apply() 
+    img_b = cv2.threshold(img_b.astype(np.uint8),0,1,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    img_b = img_b[1]
+    return img_b
+
+def low_variance_filter(img,sky_mask):
+    img_var = variance_filter(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), window_size=3)
+    varianceBasedSkyMask = np.zeros((img.shape[0],img.shape[1]), dtype=np.uint8)
+    
+    hls_img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    _,_, weather_condition  = find_hsv_upper_lower_threshold_for_skyarea_and_weather_condition(sky_mask, hls_img)
+    varianceThreshold = 10
+    if weather_condition == "day":
+        varianceThreshold = 10
+    if weather_condition == "dayCloudy":
+        varianceThreshold = 150 # threshold is increased for cloudy images, as a low threshold will make generate outline by the cloud
+    if weather_condition == "night":
+        varianceThreshold = 5 # threshold is decreased, as the variance in night image for sky is low. This could avoid missing sky pixel
+    if weather_condition == "nightCloudy":
+        varianceThreshold = 20
+
+    varianceBasedSkyMask[img_var <= varianceThreshold] = 1 # 1
+
+    # edge post processing
+    temp_edge = edge_mask(varianceBasedSkyMask)
+    varianceBasedSkyMask = cv2.bitwise_or(temp_edge,varianceBasedSkyMask)
+    # varianceBasedSkyMask -=temp_edge
+    # varianceBasedSkyMask = np.clip(varianceBasedSkyMask,0,1)
+    return varianceBasedSkyMask
 
 if __name__ =="__main__":
     parser = argparse.ArgumentParser(
@@ -67,108 +93,44 @@ if __name__ =="__main__":
     print('Start')
 
     if args.challenge :
-        config_file = '/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/checkpoint/segformer_3.py'
-        checkpoint_file ='/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/mmseg_config/work_dirs/exp89/epoch_80.pth' #'/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/checkpoint/epoch_20.pth'
-        cfg = mmcv.Config.fromfile(config_file)
-        # model = init_segmentor(config_file, checkpoint_file, device='cuda:0')
-        model = build_segmentor(cfg.model, test_cfg=cfg.get('test_cfg'))
-        model.cfg = cfg
-        model.to('cuda:0')
-        model.eval()
-        load_checkpoint(model, checkpoint_file, map_location='cpu')
-        model.CLASSES =("BackGroud","Sky")
-        result = inference_segmentor(model, img)
-        sky_mask = result[0].astype(np.uint8)  
 
-        cv2.imwrite('./model_mask.png',sky_mask*255)
+        # segmentation model prediction
+        sky_mask = model_prediction(img)
 
-        # sky_mask = vfunc(result[0]).astype(np.uint8)  
-        img_kuwahara = kuwahara(img, method='mean', radius=1)
-        # img_kuwahara = img
-        img_b = img_kuwahara[:,:,2]#clahe.apply() 
-        # vfunc = np.vectorize(lambda x : 255 if x >210 else 0)   
-        img_b = cv2.threshold(img_b.astype(np.uint8),0,1,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        img_b = img_b[1]
-        # cv2.imwrite('./b_mask.png',img_b)
-        # sky_mask_2 = process_image_or_folder(args)    
-        # cv2.imwrite('./2_mask.png',sky_mask_2)
+        # blue channel filter
+        img_b = blue_channel_filter(img)
 
-        img_var = variance_filter(cv2.cvtColor(img_kuwahara, cv2.COLOR_BGR2GRAY), window_size=3)
+        # low variance filter
+        varianceBasedSkyMask = low_variance_filter(img,sky_mask)
 
-        # cv2.imwrite('./var_filter.png',img_var)
-        varianceBasedSkyMask = np.zeros((img.shape[0],img.shape[1]), dtype=np.uint8)
-        varianceBasedSkyMask[img_var <= 10] = 1 # 1
-        temp_edge = edge_mask(varianceBasedSkyMask)
-        varianceBasedSkyMask -=temp_edge
-        varianceBasedSkyMask = np.clip(varianceBasedSkyMask,0,1)
-        # cv2.imwrite('./var_mask.png',varianceBasedSkyMask)
-
-        # sky_mask = cv2.bitwise_and(sky_mask,sky_mask_2)
 
         sky_mask = cv2.bitwise_and(sky_mask,varianceBasedSkyMask)
         sky_mask = cv2.bitwise_and(sky_mask, img_b)
+
+
+        ## Mask Post Processing - Closing & Opening 
         # squareSe = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3)) # 3x3 RECT kernel
-        # sky_mask = cv2.dilate(sky_mask, squareSe,iterations=3)
-        # sky_mask = cv2.erode(1-sky_mask, squareSe,iterations=3)#, borderType, borderValue)
-        # Step 9: Perform opening to remove small noise in fine_tuned_sky_mask
-        # skymask_opening = cv2.morphologyEx(1-sky_mask,cv2.MORPH_OPEN,squareSe, iterations=3)
-        # # Step 10: Perform closing on non-sky area to bridge small gap between non-sky area in fine_tuned_sky_mask
-        # # we are performing closing on non-sky area, hence we invert the sky mask
-        # skymask_closing_non_roi = cv2.morphologyEx(1 - sky_mask,cv2.MORPH_CLOSE,squareSe, iterations=1) 
-        
 
-        # mask_edge=cv2.Canny(1-sky_mask,100,200)
-        # print(mask_edge)
-        # mask_edge=mask_edge/255.0
-        # kernel=np.ones((5,5),np.uint8)
-        # edge=cv2.dilate(mask_edge,kernel)
-        # sky_mask[edge==1]=1
-
-        # # edge mask
-        # img_data = np.asarray(sky_mask, dtype=np.double)
-        # gx, gy = np.gradient(img_data)
-
-
-        # temp_edge = gy * gy + gx * gx
-        # temp_edge[temp_edge >= 0.5] = 1.0
-        # temp_edge = np.asarray(temp_edge, dtype=np.uint8)
-
-        # sky_mask = sky_mask+temp_edge
-        # sky_mask = sky_mask>=1
-
-        # squareSe = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2)) # 3x3 RECT kernel
-    
-        # sky_mask = cv2.erode(1-sky_mask, squareSe,iterations=3)#, borderType, borderValue)
-        # Step 9: Perform opening to remove small noise in fine_tuned_sky_mask
+        # Perform opening to remove small noise in fine_tuned_sky_mask
         # sky_mask = cv2.morphologyEx(sky_mask,cv2.MORPH_OPEN,squareSe, iterations=3)
-        # Step 10: Perform closing on non-sky area to bridge small gap between non-sky area in fine_tuned_sky_mask
+
+        # Perform closing on non-sky area to bridge small gap between non-sky area in fine_tuned_sky_mask
         # we are performing closing on non-sky area, hence we invert the sky mask
         # skymask_closing_non_roi = cv2.morphologyEx(1 - skymask_opening,cv2.MORPH_CLOSE,squareSe, iterations=1) 
-
 
         # # After closing, invert the inverted mask.
         # sky_mask = 1 - skymask_closing_non_roi
         # sky_mask = 1 - sky_mask
+
         vfunc = np.vectorize(lambda x : 255 if x ==1 else 0)
         sky_mask = vfunc(sky_mask).astype(np.uint8)  
-        # cv2.imwrite('./mask.png',sky_mask)
-
-    sz=img.shape
-
-    # clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8)) #CLAHE 생성
-    # img_b_clahe = img[:,:,2]#clahe.apply() 
-    # vfunc = np.vectorize(lambda x : 255 if x >210 else 0)   
-    # img_b = vfunc(img_b_clahe).astype('uint8')
-
-    # sky_mask = cv2.bitwise_and(sky_mask,img_b)
 
 
-    # sky_mask = cv2.imread('/opt/ml/input/final-project-level3-cv-17/SkyReplacement/SkySegmentation/mask_edge_pp.png',0)
 
 
     # select the sky
     if args.sky_path:
-        sky_path = args.sky_path # 애초에 가능한 이미지들만 보여주자.
+        sky_path = args.sky_path 
     else:
         sky_paths = select.select_sky(args.image_path, sky_mask, option= args.option) 
 
@@ -178,18 +140,15 @@ if __name__ =="__main__":
 
     sky=cv2.cvtColor(cv2.imread(sky_path), cv2.COLOR_BGR2RGB)
     mask_path = sky_path.replace('img','mask')
-    ref_mask = cv2.imread(mask_path,0) # 사용할 하늘 이미지들에 대해서는 미리 마스크가 추출되어 있어야함.
+    ref_mask = cv2.imread(mask_path,0) 
+    
 
-    # y_max,x_max,y_min,x_min= select.find_max_sky_rect(ref_mask)
-    # only_sky = sky[y_min:y_max,x_min:x_max]
+    # direct sky_path
+    if select.determine(ref_mask, sky_mask) and select.mask_intersection(sky_mask, ref_mask):
+        pass
+    else:
+        print('넣어주신 하늘 이미지를 사용할 경우 합성시 왜곡이 발생할 수 있습니다.')
 
-    # # 히스토그램 매칭
-    # img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB).astype("float32")
-    # sky_lab = cv2.cvtColor(sky, cv2.COLOR_RGB2LAB).astype("float32")
-    # matched_dehazed_image = match_histograms(img, only_sky, channel_axis=-1)
-    # transfer = np.clip(matched_dehazed_image, 0, 255).astype(np.uint8)
-    # # transfer = cv2.cvtColor(transfer,cv2.COLOR_LAB2RGB)
-    # final=replace.replace_sky(transfer,sky_mask,sky,ref_mask)
 
     # replace the sky
     I_rep=replace.replace_sky(img,sky_mask,sky,ref_mask)
@@ -197,23 +156,10 @@ if __name__ =="__main__":
 
     # color transfer
     transfer = replace.color_transfer(sky,sky_mask,I_rep,1)
+    final = cv2.cvtColor(transfer, cv2.COLOR_RGB2BGR)
     
-    
-    
-    mask_edge=cv2.Canny(sky_mask,100,200)
-    cv2.imwrite('./mask_edge.png',mask_edge)
-    mask_edge_hwc=cv2.merge([mask_edge, mask_edge, mask_edge])
 
-    # guided filtering
-    final =replace.guideFilter(img,transfer,mask_edge_hwc,(2,2),0.00000001)
-
-    # final = cv2.cvtColor(transfer, cv2.COLOR_RGB2BGR)
-    final = cv2.cvtColor(final, cv2.COLOR_RGB2BGR)
-    
-    k = cv2.imread('./mask.png',0)
-    k = 255-k
-    cv2.imwrite('./ppt_mask.png',k)
-
+    # save result file
     reusult_path = increment_jpg_path('/opt/ml/input/final-project-level3-cv-17/data/sky_replacement/','result')
     cv2.imwrite(reusult_path,final)
     
