@@ -15,4 +15,4 @@ data/dehazed_images/
 data/sky_replacement/
 data/sky_replacement_check/
 SkyReplacement/SkySegmentation/blue_value
-SkyReplacement/SkySegmentation/checkpoint
+SkyReplacement/SkySegmentation/checkpoint/
