@@ -16,8 +16,8 @@ SKY_IMAGES_PATH = '/opt/ml/input/final-project-level3-cv-17/data/sky_images/data
 
 def load_model():
     print('Load Sky Segmentor')
-    config_file = 'app/models/segformer.py'
-    checkpoint_file = 'app/weights/epoch_20.pth'
+    config_file = 'app/models/segformer.py' 
+    checkpoint_file = 'app/weights/seg_epoch_20.pth'
     cfg = mmcv.Config.fromfile(config_file)
     # model = init_segmentor(config_file, checkpoint_file, device='cuda:0')
     model = build_segmentor(cfg.model, test_cfg=cfg.get('test_cfg'))
@@ -143,7 +143,13 @@ def replace_sky(dehazed_image, sky_mask, sky):
     transfer = replace.color_transfer(sky,sky_mask,I_rep,1) # color transfer
 
     # 2) histogram matching 
-    # matched_dehazed_image = match_histograms(dehazed_image, sky, channel_axis=-1) # histogram matching
+    # g = 1.5 # histogram matchong 전에 하늘 대비, 밝기 낮추기?
+    # sky_float = sky.astype(np.float)
+    # sky_color_down = ((sky_float / 255) ** (1 / g)) * 255
+    # sky_color_down = sky_color_down.astype(np.uint8)
+    # sky_color_down = 0.5 * sky + 75
+    # sky_color_down = np.clip(sky_color_down, 0, 255).astype(np.uint8)
+    # matched_dehazed_image = match_histograms(dehazed_image, sky_color_down, channel_axis=-1) # histogram matching
     # I_rep = replace.replace_sky(matched_dehazed_image, sky_mask, sky) # replace the sky
 
     # 그라데이션
