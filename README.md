@@ -1,8 +1,8 @@
 ## 미세먼지 없는 맑은 사진
 * Naver Boostcamp AI Tech 3rd final project
 * CV 17조 MG세대
-* Demo Video :
-* Presentation Slide : 
+* Demo Video : 
+* Presentation Slide : https://drive.google.com/drive/folders/1_bYN3mC4viJHQI5G_y1e7f1iK3_IRDwW?usp=sharing
 
 ## Project Abstract
 * Problem Definition
@@ -16,17 +16,17 @@
 ## Member Introduction
 |팀원|Github|역할|
 | :--------: | :--------: | :--------: |
-|[T3078] 민선아||Image Dehazing|
-|[T3101] 백경륜||Product Serving|
-|[T3139] 이도연||Product Serving|
-|[T3177] 이효석||PM, Sky Replacement|
+|[T3078] 민선아|[@seonahmin](https://github.com/seonahmin)|Image Dehazing|
+|[T3101] 백경륜|[@baekkr95](https://github.com/baekkr95)|Product Serving|
+|[T3139] 이도연|[@omocomo](https://github.com/omocomo)|Product Serving|
+|[T3177] 이효석|[@hyoseok1223](https://github.com/hyoseok1223)|PM, Sky Replacement|
 |[T3179] 임동우|[@Dongwoo-Im](https://github.com/Dongwoo-Im)|Image Dehazing|
 
 ## Service Architecture
 ![image](https://user-images.githubusercontent.com/81875412/172397327-77f34979-b0b4-45f7-992f-b0e126c6d10b.png)
 
 ## Streamlit & Fastapi Demo
-* Environment
+* Dependencies and Installation
 
 * Run
 
@@ -34,14 +34,25 @@
 ![image](https://user-images.githubusercontent.com/81875412/172397492-34a7450e-32e4-4f45-a9a2-87b4a43a07f2.png)
 
 ## Image Dehazing
-* Environment
-
-* Pretrain
-
-* Finetune
-
+* Dependencies and Installation
+```
+Python==3.8.5 or 3.8.13
+Pytorch==1.8.1
+torchvision==0.9.1
+CUDA==10.2
+```
+* Pretrain (작성 중)
+```
+cd PSD
+python main.py
+```
+* Finetune (작성 중)
+```
+cd PSD
+python finetune.py --I_I2_loss --unlabel_index_dir=''
+```
 ## Sky Replacement
-* Environment
+* Dependencies and Installation
 
 * Train
 
@@ -49,6 +60,8 @@
 * Image Dehazing
     * PSD : https://github.com/zychen-ustc/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors
     * DehazeFormer : https://github.com/IDKiro/DehazeFormer
+    * AECR-Net : https://github.com/GlassyWu/AECR-Net
+    * IQA-Pytorch : https://github.com/chaofengc/IQA-PyTorch
 
 * Sky Replacement
     * SegFormer : https://github.com/NVlabs/SegFormer
