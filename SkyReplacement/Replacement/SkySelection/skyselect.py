@@ -214,10 +214,10 @@ def determine(ref_sky_mask, input_sky_mask):
     Q_a = cal_Q(input_P_a,ref_P_a)
     Q_s = cal_Q(input_P_s,ref_P_s)
 
-    # print(Q_a,Q_s)
+    print(Q_a,Q_s)
 
 
-    if Q_a > 0.5 and Q_s >0.3:
+    if Q_a > 0.45 and Q_s >0.25:
         return True
     else:
         return False
@@ -261,17 +261,24 @@ def select_sky(input_img_path, input_sky_mask, option, num=5 ,layout = False):
         sky_cal = pd.read_hdf('/opt/ml/input/final-project-level3-cv-17/SkyReplacement/Replacement/SkySelection/sky_db_clip.h5')
         
         # sort by user option
-        sky_cal = sky_cal.sort_values(by = option,ascending=False)
-
+        # sky_cal = sky_cal.sort_values(by = option,ascending=False)
+        sky_cal = sky_cal[sky_cal[option]>0.35]
+        print(len(sky_cal))
+        sky_cal = sky_cal.sample(frac=1).reset_index(drop=True)
 
     # filtering & num images recommendation
     recommend_list = []
     for img_path,mask_path in zip(sky_cal['img_path'],sky_cal['mask_path']):
         ref_sky_mask = cv2.imread(mask_path,0)
+        print(mask_intersection(input_sky_mask, ref_sky_mask))
         if determine(ref_sky_mask, input_sky_mask) and mask_intersection(input_sky_mask, ref_sky_mask):
+            print(img_path)
             recommend_list.append(img_path)
         if len(recommend_list) == num:
+            print('*')
             break           
+
+    print(recommend_list)
     return recommend_list 
 
 # def select_sky(input_img_path, input_sky_mask):

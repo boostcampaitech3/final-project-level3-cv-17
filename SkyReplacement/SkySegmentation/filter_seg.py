@@ -90,7 +90,7 @@ def is_sky_exist_in_image(imgcolor):
     return is_sky_exist #return result
         
         
-def variance_filter(img_gray, window_size = 3):
+def variance_filter(img_gray, window_size = 3): # osth treshold랑 비슷한 느낌인데
     """
     Variance filter
     Calculate the variance in the sliding window
@@ -107,7 +107,9 @@ def find_hsv_upper_lower_threshold_for_skyarea_and_weather_condition(rough_sky_m
      based on the rough_sky_mask provided. It also estimate the weather condition of the image using hls image 
      """
      rough_sky_area_hls = cv2.bitwise_and(hls_img, hls_img, mask=rough_sky_mask) # extracted rough sky area
-
+    # mask 영역에서 서로 겹치는 부분을 추출한다. 애초에 저 마스크 영역으로 제한되어있고
+    # 거기에 대해서 hls_img가 겹치는 부분을 추출한다.
+    # 즉 그냥 더 넓은 영역이라고 생각해도 좋을 것 같다.
      M, N, _ = hls_img.shape
      h, l, s = cv2.split(rough_sky_area_hls)
      
@@ -171,7 +173,9 @@ def find_hsv_upper_lower_threshold_for_skyarea_and_weather_condition(rough_sky_m
      if np.abs(saturation_max - saturation_min) > 50 and weather_condition == "night":
          weather_condition = "nightCloudy"
      
-     return hls_lower_threshold, hsv_upper_threshold, weather_condition
+     return hls_lower_threshold, hsv_upper_threshold, weather_condition # 이런 정보들로부터 날씨 정보를 뽑는다.
+     # 추가적으로 hls 정보를 뽑는다. 
+     # 
      
      
 
@@ -242,15 +246,15 @@ def generate_final_sky_mask(initialSkyMask):
     
 def find_sky_mask(img_color_bgr):
     # Step 1: Check whether sky exist.
-    if is_sky_exist_in_image(img_color_bgr) == False:
-        if DEBUG_MODE:
-            print("NO Sky Exist returning empty binary mask")
-        # Sky is not exist, return a empty binary mask to indicate there is no sky
-        return np.zeros((img_color_bgr.shape[0], img_color_bgr.shape[1]), dtype=np.uint8)
+    # if is_sky_exist_in_image(img_color_bgr) == False:
+    #     if DEBUG_MODE:
+    #         print("NO Sky Exist returning empty binary mask")
+    #     # Sky is not exist, return a empty binary mask to indicate there is no sky
+    #     return np.zeros((img_color_bgr.shape[0], img_color_bgr.shape[1]), dtype=np.uint8)
     
     # Step 2: Filter image with kuwahara filter to reduce noise while preserving edges
-    img_bgr_kuwahara_filtered = kuwahara(img_color_bgr, method='mean', radius=1)
-    
+    # img_bgr_kuwahara_filtered = kuwahara(img_color_bgr, method='mean', radius=1)
+    img_bgr_kuwahara_filtered = img_color_bgr
     # Step 3: Resize image to a smaller resolution, for faster estimation of hsv upper and lower threshold, and the weather condition
     resized_img_bgr_kuwahara_filtered = resize_with_aspect_ratio(img_bgr_kuwahara_filtered,width=300) # Resize the image, to reduce processing time
     

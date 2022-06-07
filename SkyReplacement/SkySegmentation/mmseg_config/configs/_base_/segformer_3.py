@@ -56,10 +56,7 @@ img_norm_cfg = dict(
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', reduce_zero_label=False),
-    dict(type='EdgeAug'),
-    dict(type='BlueEmphasis', low=190, prob=0.5),
-    dict(type='BlueStretch', prob=0.5),
-    dict(type='Resize', img_scale=(640, 640), keep_ratio=True),
+    dict(type='Resize', img_scale=(512, 512), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0),
     dict(
         type='Normalize',
@@ -93,8 +90,8 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=[(1024,1024),(512,512),(1280,960),(960,1280)],#(1836, 2448)
-        flip=True,
+        img_scale=[(512, 512)],
+        flip=False,
         flip_direction=['horizontal', 'vertical'],
         transforms=[
             dict(type='Resize', keep_ratio=True),
@@ -123,10 +120,7 @@ data = dict(
         pipeline=[
             dict(type='LoadImageFromFile'),
             dict(type='LoadAnnotations', reduce_zero_label=False),
-            dict(type='EdgeAug'),
-            dict(type='BlueEmphasis', low=190, prob=0.5),
-            dict(type='BlueStretch', prob=0.5),
-            dict(type='Resize', img_scale=(640, 640), keep_ratio=True),
+            dict(type='Resize', img_scale=(512, 512), keep_ratio=True),
             dict(type='RandomFlip', flip_ratio=0),
             dict(
                 type='Normalize',
@@ -175,9 +169,9 @@ data = dict(
             dict(type='LoadImageFromFile'),
             dict(
                 type='MultiScaleFlipAug',
-                img_scale=[(512, 512)],
-                flip=False,
-                flip_direction=['horizontal', 'vertical'],
+                img_scale=[(1024,1024),(512,512),(2448,3264)],#(1836, 2448)
+                flip=True,
+                flip_direction=['horizontal'],
                 transforms=[
                     dict(type='Resize', keep_ratio=True),
                     dict(type='RandomFlip'),
@@ -231,6 +225,6 @@ lr_config = dict(
     warmup_ratio=0.01,
     min_lr=1e-07)
 runner = dict(type='EpochBasedRunner', max_epochs=80)
-work_dir = 'work_dirs/exp82'
+work_dir = 'work_dirs/exp63'
 gpu_ids = [0]
 auto_resume = False
