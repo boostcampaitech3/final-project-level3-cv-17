@@ -1,3 +1,25 @@
+data/skyseg/
+SkyReplacement/Replacement/__pycache__/
+SkyReplacement/SkySegmentation/__pycache__/
+SkyReplacement/SkySegmentation/mmsegmentation/
+SkyReplacement/SkySegmentation/mmseg_config/__pycache__/
+SkyReplacement/SkySegmentation/mmseg_config/wandb/
+SkyReplacement/SkySegmentation/mmseg_config/work_dirs/
+SkyReplacement/SkySegmentation/mmseg_config/pretrain/
+SkyReplacement/SkySegmentation/mmseg_config/test.ipynb
+SkyReplacement/SkySegmentation/checkpoint/epoch_34.pth
+SkyReplacement/SkySegmentation/mmseg_config/configs/_base_/upernet_swin_base_patch4_window7_512x512_160k_ade20k_pretrain_224x224_22K_20210526_211650-762e2178.pth
+SkyReplacement/Replacement/SkySelection/__pycache__/
+data/sky_images/
+data/dehazed_images/
+data/sky_replacement/
+data/sky_replacement_check/*
+SkyReplacement/SkySegmentation/blue_value
+SkyReplacement/SkySegmentation/checkpoint/
+SkyReplacement/*.png
+SkyReplacement/SkySegmentation/*.png
+SkyReplacement/SkySegmentation/seg.ipynb
+
 PSD/__pycache__
 PSD/datasets/__pycache__
 PSD/models/__pycache__
@@ -11,9 +33,3 @@ PSD/wandb_setup.py
 PSD/clahe/
 
 data/
-
-SkyReplacement/Replacement/__pycache__
-SkyReplacement/Replacement/SkySelection/__pycache__
-SkyReplacement/SkySegmentation/__pycache__
-SkyReplacement/SkySegmentation/mmseg_config/__pycache__
-SkyReplacement/SkySegmentation/mmseg_config/work_dirs
