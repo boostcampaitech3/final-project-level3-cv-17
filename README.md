@@ -1,7 +1,7 @@
 # 미세먼지 없는 맑은 사진
 ### Streamlit & Fastapi 데모 실행
 1. 모델 Weights 다운로드
-    - `serving/app` 안에 weights 폴더를 만든다. 구조는 다음과 같다.
+    - `serving/app` 안에 weights 폴더를 만듭니다. 구조는 다음과 같습니다.
     
       ```bash
       └── weights
@@ -13,7 +13,7 @@
               └── SkySegmentation
                   └── seg_epoch_20.pth
       ``` 
-    - weights는 [구글 드라이브](https://drive.google.com/drive/folders/1cGudVyyesPung0HcA_IXPMSXmHceMCX-?usp=sharing)에서 다운로드 받을 수 있다.
+    - weights는 [구글 드라이브](https://drive.google.com/drive/folders/1cGudVyyesPung0HcA_IXPMSXmHceMCX-?usp=sharing)에서 다운로드 받을 수 있습니다.
 
 2. 실행 시키기
     ```
