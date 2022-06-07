@@ -31,7 +31,7 @@ def load_model():
 
     if backbone=='FFA' : model_path = 'app/weights/PSD-FFANET'
     elif backbone=='MSBDN' : model_path = 'app/weights/PSD-MSBDN'
-    elif backbone=='Dehazeformer' : model_path = 'app/weights/finetune.pth' # PSD-Dehazeformer
+    elif backbone=='Dehazeformer' : model_path = 'app/weights/dhf_finetune.pth' # PSD-Dehazeformer
     net.load_state_dict(torch.load(model_path))
     net.eval()
 
