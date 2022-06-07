@@ -24,6 +24,8 @@ PSD/pretrained_model/PSD-MSBDN
 serving/app/__pycache__
 serving/app/db/__pycache__
 serving/app/models/__pycache__
+serving/app/models/Dehazing/__pycache__
+serving/app/models/Sky/__pycache__
 serving/app/weights/
 
 data/sample/
