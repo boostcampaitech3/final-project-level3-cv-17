@@ -41,7 +41,7 @@ async def dehazing_prediction(files: List[UploadFile] = File(...)):
 @app.post("/segmentor", description="sky segmentation 결과를 요청합니다.")
 async def segmentation(files: List[UploadFile] = File(...)):
     image_bytes = await files[0].read() # dehazed image
-    segment_result = segmentor(image_bytes, True)
+    segment_result = segmentor(image_bytes)
     img_byte_arr = image_to_bytes(segment_result)
     return Response(content=img_byte_arr, media_type="image/png")
 
@@ -61,8 +61,9 @@ async def replacement(files: List[UploadFile] = File(...)):
     dehaze_image_bytes = await files[0].read() # dehazed image
     mask_image_bytes = await files[1].read()
     sky_image_bytes = await files[2].read() # sky image
+    sky_mask_bytes = await files[3].read() # sky mask
     # Sky Replacement
-    final = replace_sky(dehaze_image_bytes, mask_image_bytes, sky_image_bytes)
+    final = replace_sky(dehaze_image_bytes, mask_image_bytes, sky_image_bytes, sky_mask_bytes)
     img_byte_arr = image_to_bytes(final)
     return Response(content=img_byte_arr, media_type="image/png") # Final image(sky replaced image)
 

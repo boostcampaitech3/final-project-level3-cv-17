@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 
 import requests
+import cv2
 from PIL import Image
 
 import streamlit as st
@@ -55,11 +56,12 @@ def selection(dehaze_image_bytes, mask_image_bytes, sky_option): # dehazed image
     return sky_paths
 
 @st.cache
-def replacement(dehaze_image_bytes, mask_image_bytes, sky_image_bytes): # dehazed image, segment sky image, sky image
+def replacement(dehaze_image_bytes, mask_image_bytes, sky_image_bytes, sky_mask_bytes): # dehazed image, segment sky image, sky image
     files = [
         ('files', (dehaze_image_bytes)),
         ('files', (mask_image_bytes)),
-        ('files', (sky_image_bytes))
+        ('files', (sky_image_bytes)),
+        ('files', (sky_mask_bytes))
     ]
     response = requests.post("http://localhost:30001/replace", files=files)
     final = Image.open(io.BytesIO(response.content)).convert('RGB')
@@ -212,9 +214,13 @@ def main():
                             '원하는 하늘을 선택해주세요',
                             [str(i+1)+'번째' for i in range(len(selected))])
 
-                            sky_image = Image.open(selected[int(select_option[0])-1])
-                            
+                            selected_sky_path = selected[int(select_option[0])-1]
+                            sky_image = Image.open(selected_sky_path)
 
+                            mask_path = selected_sky_path.replace('img','mask')
+                            ref_mask = Image.open(mask_path)
+                            ref_mask_bytes = image_to_bytes(ref_mask)
+                            
                             # 선택된 sky image bytes
                             sky_byte_arr = image_to_bytes(sky_image)
 
@@ -231,14 +237,13 @@ def main():
                 if 'submitted' in st.session_state:
                     print(st.session_state.submitted)
                     ##### SKY REPLACEMENT #####
-                    sky_replace = replacement(dehaze_image_bytes, segment_bytes, sky_byte_arr)
+                    sky_replace = replacement(dehaze_image_bytes, segment_bytes, sky_byte_arr, ref_mask_bytes)
                     # st.write(sky_replace)
 
                     # 공백
                     with col2:
                         st.write(' ')
-
-                    
+                        
                     with col3:
                         st.header('After Cloud Generate')
                         # st.image(segment) # segmentation 확인하고 싶을 때
