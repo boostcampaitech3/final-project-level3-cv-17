@@ -13,6 +13,9 @@ SkyReplacement/Replacement/SkySelection/__pycache__/
 data/sky_images/
 data/dehazed_images/
 data/sky_replacement/
-data/sky_replacement_check/
+data/sky_replacement_check/*
 SkyReplacement/SkySegmentation/blue_value
 SkyReplacement/SkySegmentation/checkpoint/
+SkyReplacement/*.png
+SkyReplacement/SkySegmentation/*.png
+SkyReplacement/SkySegmentation/seg.ipynb
