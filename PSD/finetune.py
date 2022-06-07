@@ -156,7 +156,6 @@ def train(opt, work_dir_exp, device, train_data_loader, val_data_loader, net, ne
         # --- evaluation --- #
         net.eval()
 
-        val_PSNR, val_SSIM = [], []
         val_PSNR_score, val_SSIM_score, val_NIQE_score, val_BRIS_score, val_NIMA_score = 0.0, 0.0, 0.0, 0.0, 0.0
         
         pbar = tqdm(val_data_loader, total=len(val_data_loader), desc=f"[Epoch {epoch+1}] Val")
