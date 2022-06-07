@@ -8,14 +8,12 @@ from PIL import Image
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.utils as vutils
 from torchvision.transforms import Compose, ToTensor, Normalize
 from torchvision.transforms.functional import to_pil_image
 
-from .models.FFA import FFANet
-from .models.MSBDN import MSBDNNet
-from .models.dehazeformer import dehazeformer_m
+from .models.Dehazing.FFA import FFANet
+from .models.Dehazing.MSBDN import MSBDNNet
+from .models.Dehazing.Dehazeformer import dehazeformer_m
 
 def load_model():
     device_ids = [Id for Id in range(torch.cuda.device_count())]
@@ -29,9 +27,9 @@ def load_model():
     elif backbone=='Dehazeformer' : net = dehazeformer_m()
     net = nn.DataParallel(net, device_ids=device_ids)
 
-    if backbone=='FFA' : model_path = 'app/weights/PSD-FFANET'
-    elif backbone=='MSBDN' : model_path = 'app/weights/PSD-MSBDN'
-    elif backbone=='Dehazeformer' : model_path = 'app/weights/dhf_finetune.pth' # PSD-Dehazeformer
+    if backbone=='FFA' : model_path = 'app/weights/Dehazing/PSD-FFANET'
+    elif backbone=='MSBDN' : model_path = 'app/weights/Dehazing/PSD-MSBDN'
+    elif backbone=='Dehazeformer' : model_path = 'app/weights/Dehazing/Dehazeformer-Finetune.pth' # PSD-Dehazeformer
     net.load_state_dict(torch.load(model_path))
     net.eval()
 
@@ -64,8 +62,8 @@ def get_prediction(image_bytes: bytes) -> bytes:
         haze.to(device)
         print('Hazing Begin!')
 
-        ### MSBDN & FFA ###
-        _, pred, T, A, I = PSD(haze, haze_A, True) # For FFA and MSBDN
+        ### FFA / MSBDN / Dehazeformer ###
+        _, pred, T, A, I = PSD(haze, haze_A, True) 
         ts = torch.squeeze(pred.clamp(0, 1).cpu())
         ts = to_pil_image(ts)
     return ts
