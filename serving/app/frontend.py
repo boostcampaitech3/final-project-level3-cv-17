@@ -80,24 +80,36 @@ def save_btn_click(option, bytes):
     files = [
         ('files', (bytes))
     ]
-    ### 이 부분은 일단 프로토타입용으로 작성했음
-    ### 나중에 구름 예시 사진들 카테고리가 정리되면 수정하면 됨.
-    if option == '선택 안 함':
-        cloud_option = 'no_option'
-    elif option == '큰 구름':
-        cloud_option = 'big'
-    elif option == '작은 구름':
-        cloud_option = 'small'
-    elif option == '분홍 구름':
-        cloud_option = 'pink'
-    else:
-        cloud_option = 'none'
 
-    st.write(f"{cloud_option}으로 다운로드")
+    if option == 'a pink sky':
+        cloud_option = 'a_pink_sky'
+    elif option == 'a blue sky':
+        cloud_option = 'a_blue_sky'
+    elif option == 'a_sunset_sky':
+        cloud_option = 'a_sunset_sky'
+    elif option == 'a sky with small clouds':
+        cloud_option = 'a_sky_with_small_clouds'
+    elif option == 'a sky with large clouds':
+        cloud_option = 'a_sky_with_large_clouds'
+    elif option == 'a dark night sky':
+        cloud_option = 'a_dark_night_sky'
+    elif option == 'the_starry_night_sky':
+        cloud_option = 'the_starry_night_sky'
+    else:
+        cloud_option = 'dehazed'
+
+    st.write(f"{cloud_option} 다운로드")
     db_save(cloud_option, files)
 
-def test_resize(haze_img, max_size):
+def test_resize(haze_img, min_size, max_size, check_size):
     width, height = haze_img.size
+
+    if width < min_size or height < min_size:
+        if width < height:
+            haze_img = haze_img.resize(( min_size, int(min_size*(height/width)) ), Image.ANTIALIAS)
+        elif width >= height:
+            haze_img = haze_img.resize(( int(min_size*(width/height)), min_size ), Image.ANTIALIAS)
+        width, height = haze_img.size
     
     if width > max_size or height > max_size:
         if width < height:
@@ -106,13 +118,13 @@ def test_resize(haze_img, max_size):
             haze_img = haze_img.resize(( max_size, int(max_size*(height/width)) ), Image.ANTIALIAS)
         width, height = haze_img.size
     
-    if width%16 != 0 and height%16 != 0:
-        haze_img = haze_img.resize((width + 16 - width%16, height + 16 - height%16), Image.ANTIALIAS)
-    elif width%16 != 0:
-        haze_img = haze_img.resize((width + 16 - width%16, height), Image.ANTIALIAS)
-    elif height%16 != 0:
-        haze_img = haze_img.resize((width, height + 16 - height%16), Image.ANTIALIAS)
-    
+    if width % check_size != 0 and height % check_size != 0:
+        haze_img = haze_img.resize((width - width%check_size, height - height%check_size), Image.ANTIALIAS)
+    elif width % check_size != 0:
+        haze_img = haze_img.resize((width - width%check_size, height), Image.ANTIALIAS)
+    elif height % check_size != 0:
+        haze_img = haze_img.resize((width, height - height%check_size), Image.ANTIALIAS)
+
     return haze_img
 
 def main():
@@ -127,7 +139,9 @@ def main():
         image = Image.open(io.BytesIO(image_bytes))
         
         # Image Resize
-        image = test_resize(image, 3024)
+        min_size, max_size = 512, 3024
+        check_size = 16
+        image = test_resize(image, min_size, max_size, check_size)
         image_bytes = image_to_bytes(image)
     
         ### 상단 부분
@@ -191,7 +205,7 @@ def main():
 
                     if selected:
                         for i, select_sky_path in enumerate(selected):
-                            st.image(select_sky_path, width=384)
+                            st.image(select_sky_path, width=386, caption=str(i+1)+'번째', use_column_width='always')
 
                         with st.form("Select Cloud"):
                             select_option = st.selectbox(
@@ -227,7 +241,7 @@ def main():
                     
                     with col3:
                         st.header('After Cloud Generate')
-                        st.image(segment)
+                        # st.image(segment) # segmentation 확인하고 싶을 때
                         ### 위에서 api response를 받은 sky_replace를 여기서 웹에 출력한다.
                         st.image(sky_replace, caption='Sky Replacement 이미지')
                         ### 이미지 다운로드와 함께 request를 날림 -> app.post('/save')
