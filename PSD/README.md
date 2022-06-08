@@ -1,15 +1,10 @@
 # PSD 사용 시 참고사항
 
 ### 0. Environment
-python==3.8.5 <br>
-torch==1.7.1 <br>
-torchvision==0.8.2 <br>
-cuda==11.0 <br>
-
-pyiqa를 쓰실 경우,
-torch==1.8.1 <br>
+Python==3.8.5 or 3.8.13 <br>
+Pytorch==1.8.1 <br>
 torchvision==0.9.1 <br>
-cuda==10.2 <br>
+CUDA==10.2 <br>
 
 ```
 conda create -n pyiqa python=3.8.5
@@ -29,9 +24,6 @@ data는 gdrive에 zip 파일로 올려두었습니다.
 │   │   ├── gt
 │   │   ├── hazy
 │   │   └── mask
-│   ├── Crawling
-│   │   ├── gt
-│   │   └── hazy
 │   ├── Hidden
 │   │   ├── gt_clahe
 │   │   └── hazy
@@ -50,16 +42,14 @@ data는 gdrive에 zip 파일로 올려두었습니다.
 │   └── RESIDE-OTS (특수기호 주의)
 │       ├── gt
 │       └── hazy
-│           ├── part1
-│           ├── part2
-│           ├── part3
-│           └── part4
+│           └── part1
 │
 └── PSD
     └── pretrained_model
-        ├── PSD-FFANET
         ├── PSD-GCANET
-        └── PSD-MSBDN
+        ├── PSD-FFANET
+        ├── PSD-MSBDN
+        └── Dehazeformer-Pretrain.pth
 ``` 
 
 ### 2. our_datasets.py
