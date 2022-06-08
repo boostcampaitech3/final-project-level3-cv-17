@@ -63,9 +63,9 @@ data는 gdrive에 zip 파일로 올려두었습니다.
 ``` 
 
 ### 2. our_datasets.py
-SynTrainData : Train dataset (gt & hazy) <br>
-RealTrainData_CLAHE : Train dataset (gt_clahe & hazy) : gt_clahe는 CLAHE.py 결과로 얻을 수 있습니다. <br>
-SynValData : Valid dataset (gt & hazy) <br>
+TrainData_label : Train dataset (gt & hazy) <br>
+TrainData_unlabel : Train dataset (gt_clahe & hazy) : gt_clahe는 CLAHE.py 결과로 얻을 수 있습니다. <br>
+ValData_label : Valid dataset (gt & hazy) <br>
 ETCDataset : Test dataset (hazy) <br>
 
 ### 3. make_data.py
