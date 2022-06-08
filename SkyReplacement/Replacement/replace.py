@@ -24,20 +24,20 @@ def find_max_sky_rect(mask):
 	r1=np.max(y)
 	print((r1,c1,r2,c2))
 	return (r1,c1,r2,c2)
-def replace_sky(img,img_mask,ref,ref_mask):
 
-	height, width = img_mask.shape
+def replace_sky(img, img_mask, ref, ref_mask):
 
-	sky_resize = cv2.resize(ref, (width, height))
+    height, width = img_mask.shape
+    sky_resize = cv2.resize(ref, (width, height))
 
-	I_rep=img.copy()
-	sz=img.shape
+    mask_bool = (img_mask/255).astype(np.uint8)
+    mask_bool_reverse = (1-img_mask/255).astype(np.uint8)
+    
+    I_rep = np.zeros_like(img)
+    I_rep += np.repeat(mask_bool[:,:,np.newaxis], 3, axis=2) * sky_resize
+    I_rep += np.repeat(mask_bool_reverse[:,:,np.newaxis], 3, axis=2) * img
 
-	for i in range(sz[0]):
-		for j in range(sz[1]):
-			if(img_mask[i,j].any()):
-				I_rep[i,j,:] = sky_resize[i,j,:]
-	return I_rep
+    return I_rep
 
 def guideFilter(I, p, mask_edge, winSize, eps):	#input p,giude I
     
