@@ -198,7 +198,7 @@ def main():
             
             ##### SKY SEGMENTATION MODEL #####
             segment_bytes, segment = segmentation(dehaze_image_bytes)
-            
+
             submitted = False
 
             with col1:
@@ -225,13 +225,13 @@ def main():
                                 state = check(segment_bytes, ref_mask_bytes)
 
                                 if state == 'sky_image_dismatch':
-                                    st.text("업로드한 하늘 이미지를 합성 시 왜곡이 발생할 수 있습니다.")
+                                    st.text("업로드한 하늘 이미지 합성 시 왜곡이 발생할 수 있습니다.")
                                 elif state == 'input_image_no_sky':
                                     st.text("Dehazing 이미지에 하늘이 존재하지 않습니다.")
                                 else:
                                     st.text("하늘을 합성할 수 있습니다.")
 
-                                submitted = st.form_submit_button('구름 합성 시작')
+                                submitted = st.form_submit_button('하늘 합성 시작')
                         
 
                     else: # 선택한 구름에 대해 selection
@@ -263,13 +263,13 @@ def main():
                                 state = check(segment_bytes, ref_mask_bytes)
 
                                 if state == 'sky_image_dismatch':
-                                    st.text("선택한 하늘 이미지를 합성 시 왜곡이 발생할 수 있습니다.")
+                                    st.text("선택한 하늘 이미지 합성 시 왜곡이 발생할 수 있습니다.")
                                 elif state == 'input_image_no_sky':
                                     st.text("Dehazing 이미지에 하늘이 존재하지 않습니다.")
                                 else:
                                     st.text("하늘을 합성할 수 있습니다.")
 
-                                submitted = st.form_submit_button('구름 합성 시작')
+                                submitted = st.form_submit_button('하늘 합성 시작')
                             
 
                 if submitted:
