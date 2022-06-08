@@ -26,7 +26,8 @@ serving/app/db/__pycache__
 serving/app/models/__pycache__
 serving/app/models/Dehazing/__pycache__
 serving/app/models/Sky/__pycache__
-serving/app/weights/
+serving/app/weights/Dehazing/
+serving/app/weights/Sky/SkySegmentation/
 
 data/sample/
 data/BeDDE/gt/
