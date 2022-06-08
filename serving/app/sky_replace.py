@@ -137,6 +137,21 @@ def select_sky_paths(dehazed_image, sky_mask, option):
     # sky_path = sky_paths[0]
     return sky_paths
 
+def check_sky(sky_mask, ref_mask):
+    sky_mask = load_mask_image(sky_mask)
+    ref_mask = load_mask_image(ref_mask)
+    state = 'OK' # replace 결과 및 상태 확인
+    # direct sky_path
+    if select.determine(ref_mask, sky_mask) and select.mask_intersection(sky_mask, ref_mask):
+        pass
+    else:
+        print('넣어주신 하늘 이미지를 사용할 경우 합성시 왜곡이 발생할 수 있습니다.')
+        state = 'sky_image_dismatch'
+    # Exception
+    if np.all((sky_mask == 0)):
+        print('이미지에 하늘이 존재하지 않습니다.')
+        state = 'input_image_no_sky'
+    return state
 
 def replace_sky(dehazed_image, sky_mask, sky, ref_mask):
     print('Sky Replacement Begin!')
@@ -144,12 +159,6 @@ def replace_sky(dehazed_image, sky_mask, sky, ref_mask):
     sky = load_image(sky)
     sky_mask = load_mask_image(sky_mask)
     ref_mask = load_mask_image(ref_mask)
-
-    # direct sky_path
-    if select.determine(ref_mask, sky_mask) and select.mask_intersection(sky_mask, ref_mask):
-        pass
-    else:
-        print('넣어주신 하늘 이미지를 사용할 경우 합성시 왜곡이 발생할 수 있습니다.')
 
     # 1) color transfer
     I_rep = replace.replace_sky(dehazed_image, sky_mask, sky) # replace the sky

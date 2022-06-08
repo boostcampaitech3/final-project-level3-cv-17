@@ -56,6 +56,15 @@ def selection(dehaze_image_bytes, mask_image_bytes, sky_option): # dehazed image
     return sky_paths
 
 @st.cache
+def check(mask_image_bytes, sky_mask_bytes): # dehazed image, segment sky image, sky image
+    files = [
+        ('files', (mask_image_bytes)),
+        ('files', (sky_mask_bytes))
+    ]
+    response = requests.post("http://localhost:30001/check", files=files)
+    return response.content.decode('utf-8')
+
+@st.cache
 def replacement(dehaze_image_bytes, mask_image_bytes, sky_image_bytes, sky_mask_bytes): # dehazed image, segment sky image, sky image
     files = [
         ('files', (dehaze_image_bytes)),
@@ -186,58 +195,95 @@ def main():
         ### 하단 부분
         with st.container():
             col1, col2, col3 = st.columns([3,1,3])  # 구름 예시 사진, 빈 공간, 구름 inference 사진
-
-            ### TODO
-            ### db에 구름 예시 사진들이 저장되어 있음. (절대 경로로 저장하고 vscode 서버 안에 실제 사진들이 저장)
-            ### 이 부분은 CLIP 사용하는 코드가 완성되고, 구름 카테고리도 완성이 되면 수정하면 될 듯
-            ### Example))) 분홍 구름 선택 -> CLIP으로 추천 -> db에서 3장 뽑아옴 -> streamlit에 출력
-            ### 3개의 사진에 대해 각각 sky replacement를 시작하는 버튼을 추가
             
             ##### SKY SEGMENTATION MODEL #####
             segment_bytes, segment = segmentation(dehaze_image_bytes)
             
+            submitted = False
+
             with col1:
                 st.header("Choose Cloud Image")
                 with st.expander("원하는 구름 이미지를 선택해주세요"):
                     option = st.selectbox(
-                        '이미지와 단어에 어울리는 하늘을 추천합니다',
-                        ('a pink sky', 'a blue sky', 'a sunset sky', 'a sky with small clouds', 'a sky with large clouds', 'a dark night sky', 'the starry night sky'))
+                        """이미지와 단어에 어울리는 하늘을 추천합니다.""",
+                        ('Upload sky image', 'a pink sky', 'a blue sky', 'a sunset sky', 'a sky with small clouds', 'a sky with large clouds', 'a dark night sky', 'the starry night sky'))
 
-                    selected = selection(dehaze_image_bytes, segment_bytes, option)   
 
-                    if selected:
-                        for i, select_sky_path in enumerate(selected):
-                            st.image(select_sky_path, width=386, caption=str(i+1)+'번째', use_column_width='always')
+                    if option == 'Upload sky image':
+                        uploaded_sky_file = st.file_uploader("Upload sky image", type=["jpg", "jpeg","png"])
 
-                        with st.form("Select Cloud"):
-                            select_option = st.selectbox(
-                            '원하는 하늘을 선택해주세요',
-                            [str(i+1)+'번째' for i in range(len(selected))])
-
-                            selected_sky_path = selected[int(select_option[0])-1]
-                            sky_image = Image.open(selected_sky_path)
-
-                            mask_path = selected_sky_path.replace('img','mask')
-                            ref_mask = Image.open(mask_path)
-                            ref_mask_bytes = image_to_bytes(ref_mask)
+                        if uploaded_sky_file:
+                            sky_image_bytes = uploaded_sky_file.getvalue()
+                            sky_image = Image.open(io.BytesIO(sky_image_bytes))
+                            st.image(sky_image, width=386, caption='업로드한 하늘 이미지', use_column_width='always')
                             
-                            # 선택된 sky image bytes
-                            sky_byte_arr = image_to_bytes(sky_image)
+                            # 사용자가 입력한 하늘 이미지에 대한 segment
+                            ref_mask_bytes, sky_segment = segmentation(sky_image_bytes)
+                            # st.image(sky_segment, width=386)
+                        
+                            with st.form("업로드한 하늘 이미지로 합성 시작"):
+                                state = check(segment_bytes, ref_mask_bytes)
 
-                            submitted = st.form_submit_button('구름 합성 시작')
+                                if state == 'sky_image_dismatch':
+                                    st.text("업로드한 하늘 이미지를 합성 시 왜곡이 발생할 수 있습니다.")
+                                elif state == 'input_image_no_sky':
+                                    st.text("Dehazing 이미지에 하늘이 존재하지 않습니다.")
+                                else:
+                                    st.text("하늘을 합성할 수 있습니다.")
+
+                                submitted = st.form_submit_button('구름 합성 시작')
+                        
+
+                    else: # 선택한 구름에 대해 selection
+                        selected = selection(dehaze_image_bytes, segment_bytes, option)   
+
+                        if len(selected) == 0:
+                            st.text("만족하는 하늘 이미지가 없습니다.")
+                            st.text("직접 하늘 이미지를 업로드하거나 다른 키워드를 선택해주세요.")
+
+                        if selected:
+                            for i, select_sky_path in enumerate(selected):
+                                st.image(select_sky_path, width=386, caption=str(i+1)+'번째', use_column_width='always')
+
+                            with st.form("Select Cloud"):
+                                select_option = st.selectbox(
+                                '원하는 하늘을 선택해주세요',
+                                [str(i+1)+'번째' for i in range(len(selected))])
+
+                                selected_sky_path = selected[int(select_option[0])-1]
+                                sky_image = Image.open(selected_sky_path)
+
+                                mask_path = selected_sky_path.replace('img','mask')
+                                ref_mask = Image.open(mask_path)
+                                ref_mask_bytes = image_to_bytes(ref_mask)
+                                
+                                # 선택된 sky image bytes
+                                sky_image_bytes = image_to_bytes(sky_image)
+
+                                state = check(segment_bytes, ref_mask_bytes)
+
+                                if state == 'sky_image_dismatch':
+                                    st.text("선택한 하늘 이미지를 합성 시 왜곡이 발생할 수 있습니다.")
+                                elif state == 'input_image_no_sky':
+                                    st.text("Dehazing 이미지에 하늘이 존재하지 않습니다.")
+                                else:
+                                    st.text("하늘을 합성할 수 있습니다.")
+
+                                submitted = st.form_submit_button('구름 합성 시작')
                             
 
                 if submitted:
                     st.session_state.submitted = True
+                    submitted = False
 
                 ### 해당 버튼을 눌렀을 때, sky replacement가 시작된다.
                 ### 추후에 각 이미지(3장) 별로 버튼을 만들면 될 듯.
                 # sky_replace = None
                 
-                if 'submitted' in st.session_state:
+                if 'submitted' in st.session_state and st.session_state.submitted:
                     print(st.session_state.submitted)
                     ##### SKY REPLACEMENT #####
-                    sky_replace = replacement(dehaze_image_bytes, segment_bytes, sky_byte_arr, ref_mask_bytes)
+                    sky_replace = replacement(dehaze_image_bytes, segment_bytes, sky_image_bytes, ref_mask_bytes)
                     # st.write(sky_replace)
 
                     # 공백
@@ -261,7 +307,7 @@ def main():
                             on_click=save_btn_click(option, sky_replace_bytes)
                         )
 
-    ### Challenge : inference하는 과정이 background에서 실행이 되느냐??
+                    st.session_state.submitted = False # 초기화
 
 
     # 웹사이트 접속할 때 처음에 나오는 예시 사진

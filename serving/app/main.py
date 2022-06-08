@@ -7,7 +7,7 @@ from typing import List, Union, Optional, Dict, Any
 from datetime import datetime
 
 from app.dehazing import get_prediction
-from app.sky_replace import segmentor, select_sky_paths, replace_sky
+from app.sky_replace import segmentor, select_sky_paths, check_sky, replace_sky
 import io
 import os
 
@@ -55,6 +55,13 @@ async def sky_select(files: List[UploadFile] = File(...), cloud_option: str=None
     selected = select_sky_paths(dehaze_image_bytes, mask_image_bytes, cloud_option)
     selected = FilePath(file_path=selected)
     return selected # selected image paths
+
+@app.post("/check", description="Sky replacement가 잘 실행될 수 있는지 확인합니다.")
+async def check_sky_mask(files: List[UploadFile] = File(...)):
+    mask_image_bytes = await files[0].read()
+    sky_mask_bytes = await files[1].read() # sky mask
+    state = check_sky(mask_image_bytes, sky_mask_bytes)
+    return Response(content=state)
 
 @app.post("/replace", description="sky replacement 결과를 요청합니다.")
 async def replacement(files: List[UploadFile] = File(...)):
