@@ -49,7 +49,7 @@
     - Makefile run_client의 streamlit이 실행되면 해당 url에서 동작을 확인할 수 있습니다.
 
 ## Model Process
-![image](https://user-images.githubusercontent.com/81875412/172397492-34a7450e-32e4-4f45-a9a2-87b4a43a07f2.png)
+![image](https://user-images.githubusercontent.com/90104418/172589792-e65c3092-38ea-42cc-8fdc-de7f4b548db1.png)
 
 ## Reference
 * Image Dehazing
@@ -60,8 +60,14 @@
 
 * Sky Replacement
     * SegFormer : https://github.com/NVlabs/SegFormer
+    * Sky Is Not the Limit Paper : https://sites.google.com/site/yihsuantsai/research/siggraph16-sky
+    * Sky Segmentation Reference Repo : https://github.com/OwYeong/SkySegmentationPython
+    * Sky optimization : https://github.com/google/sky-optimization
 
 * DataSet
     * RESIDE : https://sites.google.com/view/reside-dehaze-datasets/reside-standard?authuser=0
     * MRFID : http://www.vistalab.ac.cn/MRFID-for-defogging/
     * BeDDE : https://github.com/xiaofeng94/BeDDE-for-defogging
+    * Optimized Sky Dataset- ADE 20k : https://console.cloud.google.com/storage/browser/cvprw2020_sky_seg/public_data/
+    * Sky Image Dataset : https://www.google.com/url?q=http%3A%2F%2Fvllab.ucmerced.edu%2Fytsai%2FSIGGRAPH16%2Fdatabase.zip&sa=D&sntz=1&usg=AOvVaw2zmA3AdJafXUARCFddv1pM
+
