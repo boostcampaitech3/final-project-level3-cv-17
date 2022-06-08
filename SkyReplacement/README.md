@@ -117,10 +117,12 @@ python skyselect.py
 [Optimized Sky Dataset- ADE 20k](https://console.cloud.google.com/storage/browser/cvprw2020_sky_seg/public_data/)
 [Sky Image Dataset ](https://www.google.com/url?q=http%3A%2F%2Fvllab.ucmerced.edu%2Fytsai%2FSIGGRAPH16%2Fdatabase.zip&sa=D&sntz=1&usg=AOvVaw2zmA3AdJafXUARCFddv1pM) -- put database in data/sky_images/ 
 ## Reference
-* SkyReplacement
-[Adobe Research Sky Replacement Paper](https://sites.google.com/site/yihsuantsai/research/siggraph16-sky)
+**SkyReplacement**
+
+[Adobe Research Sky Replacement Paper](https://sites.google.com/site/yihsuantsai/research/siggraph16-sky)      
 [SkyReplacement Repo](https://github.com/HiveYuan/Sky-Replacement)
 
-* Sky Segmentation
-[Sky Segmentation Repo(filter)](https://github.com/OwYeong/SkySegmentationPython)
+**Sky Segmentation**
+
+[Sky Segmentation Repo(filter)](https://github.com/OwYeong/SkySegmentationPython)     
 [sky optimization](https://github.com/google/sky-optimization)
