@@ -82,15 +82,17 @@ pip install git+https://github.com/chaofengc/IQA-PyTorch.git
    
 2. 실행 시키기 (작성 중)
    * Pretrain
-   ```
-   cd PSD
-   python main.py
-   ```
+   
+      ```
+      cd PSD
+      python main.py
+      ```
    * Finetune
-   ```
-   cd PSD
-   python finetune.py --I_I2_loss --unlabel_index_dir=''
-   ```
+   
+      ```
+      cd PSD
+      python finetune.py --I_I2_loss --unlabel_index_dir=''
+      ```
 ## Sky Replacement
 * Dependencies and Installation
 
