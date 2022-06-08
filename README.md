@@ -78,7 +78,7 @@ pip install git+https://github.com/chaofengc/IQA-PyTorch.git
           └── Dehazeformer-Finetune.pth
       ```
    - PSD-GCANET, PSD-FFANET, PSD-MSBDN, dehazeformer-m weights는 [PSD](https://github.com/zychen-ustc/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors), [Dehazeformer](https://github.com/IDKiro/DehazeFormer) github에서 다운로드 받을 수 있습니다.
-   - MSBDN-Finetune, Dehazeformer-Pretrain, Dehazeformer-Finetune weights는 [구글 드라이브](https://drive.google.com/drive/folders/1cGudVyyesPung0HcA_IXPMSXmHceMCX-?usp=sharing)에서 다운로드 받을 수 있습니다.
+   - MSBDN-Finetune, Dehazeformer-Pretrain, Dehazeformer-Finetune weights는 [구글 드라이브](https://drive.google.com/drive/folders/1IvmgsbyakQMcHsNMrdT3awe0NkuzTsxV)에서 다운로드 받을 수 있습니다.
    
 2. 실행 시키기 (작성 중)
    * Pretrain
