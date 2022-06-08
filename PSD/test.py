@@ -30,13 +30,13 @@ elif backbone=='Dehazeformer' : net = dehazeformer_m()
 net = nn.DataParallel(net, device_ids=device_ids)
 
 if backbone=='FFA' : model_path = 'pretrained_model/PSD-FFANET'
-elif backbone=='MSBDN' : model_path = 'pretrained_model/exp25epoch10.pth' # pretrained_model/PSD-MSBDN # pretrained_model/exp25epoch10.pth
-elif backbone=='Dehazeformer' : model_path = 'pretrained_model/finetune.pth' # pretrained_model/PSD-Dehazeformer.pth # pretrained_model/finetune.pth
+elif backbone=='MSBDN' : model_path = 'finetuned_model/MSBDN-Finetune.pth'
+elif backbone=='Dehazeformer' : model_path = 'finetuned_model/Dehazeformer-Finetune.pth'
 net.load_state_dict(torch.load(model_path))
 net.eval()
 
 test_data_dir = f'../data/{data}/hazy/'
-test_data_loader = DataLoader(ETCDataset(test_data_dir, min_size, max_size, check_size), batch_size=1, shuffle=False, num_workers=8) # For FFA and MSBDN
+test_data_loader = DataLoader(ETCDataset(test_data_dir, min_size, max_size, check_size), batch_size=1, shuffle=False, num_workers=8)
 
 output_dir = 'output/' + model_path.split('/')[-2] +'/'+ model_path.split('/')[-1].split('.')[0] +'/'+ test_data_dir.split('/')[2] +'/'
 if not os.path.exists(output_dir):
