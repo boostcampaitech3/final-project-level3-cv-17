@@ -138,6 +138,22 @@ def test_resize(haze_img, min_size, max_size, check_size):
 
     return haze_img
 
+def apply_clahe(image):
+    clip_limit = 1
+    grid_size = 64
+    # PIL to CV2 
+    numpy_image = np.array(image)  
+    img = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
+    # BGR to HSV
+    b,g,r = cv2.split(img)
+    img_rgb = cv2.merge([r, g, b])
+    img_hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
+    # Apply CLAHE
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(grid_size,grid_size))
+    img_out = clahe.apply(img_rgb.reshape(-1)).reshape(img_rgb.shape)
+    img_out = Image.fromarray(img_out)
+    return img_out
+
 def main():
     # print('main')
     st.title("Dehazing & Sky Replacement")
@@ -177,9 +193,11 @@ def main():
                 st.header("After Dehazing")
                 st.spinner("dehazing now...")
                 ### Dehazing 결과를 웹에 출력
-                st.image(dehaze_image, caption='Dehazed 이미지')
-
+                # dehaze image CLAHE
                 
+                dehaze_image_out = apply_clahe(dehaze_image)
+                st.image(dehaze_image_out, caption='Dehazed 이미지')
+
                 option = '선택 안 함'
                 # dehazed 이미지 저장 버튼
                 # 만약 구름 합성 사진이 맘에 안 들면, dehazed된 이미지만 저장할 수 있게 만든 버튼
