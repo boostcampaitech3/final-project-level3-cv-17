@@ -110,3 +110,8 @@ pip install git+https://github.com/chaofengc/IQA-PyTorch.git
 
 * Sky Replacement
     * SegFormer : https://github.com/NVlabs/SegFormer
+
+* DataSet
+    * RESIDE : https://sites.google.com/view/reside-dehaze-datasets/reside-standard?authuser=0
+    * MRFID : http://www.vistalab.ac.cn/MRFID-for-defogging/
+    * BeDDE : https://github.com/xiaofeng94/BeDDE-for-defogging
