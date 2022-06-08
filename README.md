@@ -1,7 +1,5 @@
 ## 미세먼지 없는 맑은 사진
-* Naver Boostcamp AI Tech 3rd final project
 * CV 17조 MG세대
-* Demo Video : 
 * Presentation Slide : https://drive.google.com/drive/folders/1_bYN3mC4viJHQI5G_y1e7f1iK3_IRDwW?usp=sharing
 
 ## Project Abstract
