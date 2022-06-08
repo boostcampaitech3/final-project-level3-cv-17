@@ -59,16 +59,38 @@ Pytorch==1.8.1
 torchvision==0.9.1
 CUDA==10.2
 ```
-* Pretrain (작성 중)
 ```
-cd PSD
-python main.py
+pip install git+https://github.com/chaofengc/IQA-PyTorch.git
 ```
-* Finetune (작성 중)
-```
-cd PSD
-python finetune.py --I_I2_loss --unlabel_index_dir=''
-```
+1. 모델 Weights 다운로드
+   * PSD 폴더 내 weights 구조는 다음과 같습니다.
+   
+      ```
+      PSD
+      ├── pretrained_model
+      │   ├── PSD-GCANET (From PSD)
+      │   ├── PSD-FFANET (From PSD)
+      │   ├── PSD-MSBDN  (From PSD)
+      │   ├── dehazeformer-m.pth (From Dehazeformer)
+      │   └── Dehazeformer-Pretrain.pth
+      └── finetuned_model
+          ├── MSBDN-Finetune.pth
+          └── Dehazeformer-Finetune.pth
+      ```
+   - PSD-GCANET, PSD-FFANET, PSD-MSBDN, dehazeformer-m weights는 [PSD](https://github.com/zychen-ustc/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors), [Dehazeformer](https://github.com/IDKiro/DehazeFormer) github에서 다운로드 받을 수 있습니다.
+   - MSBDN-Finetune, Dehazeformer-Pretrain, Dehazeformer-Finetune weights는 [구글 드라이브](https://drive.google.com/drive/folders/1cGudVyyesPung0HcA_IXPMSXmHceMCX-?usp=sharing)에서 다운로드 받을 수 있습니다.
+   
+2. 실행 시키기 (작성 중)
+   * Pretrain
+   ```
+   cd PSD
+   python main.py
+   ```
+   * Finetune
+   ```
+   cd PSD
+   python finetune.py --I_I2_loss --unlabel_index_dir=''
+   ```
 ## Sky Replacement
 * Dependencies and Installation
 
