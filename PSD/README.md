@@ -16,8 +16,6 @@ conda install pytorch==1.8.1 torchvision==0.9.1 torchaudio==0.8.1 cudatoolkit=10
 ```
 
 ### 1. Directory
-data, pretraind_model은 아래처럼 구성해놓았습니다.
-data는 gdrive에 zip 파일로 올려두었습니다.
 ```
 ├── data
 │   ├── BeDDE
@@ -45,12 +43,25 @@ data는 gdrive에 zip 파일로 올려두었습니다.
 │           └── part1
 │
 └── PSD
-    └── pretrained_model
-        ├── PSD-GCANET
-        ├── PSD-FFANET
-        ├── PSD-MSBDN
-        └── Dehazeformer-Pretrain.pth
+    ├── pretrained_model
+    │   ├── PSD-GCANET (From PSD)
+    │   ├── PSD-FFANET (From PSD)
+    │   ├── PSD-MSBDN  (From PSD)
+    │   ├── dehazeformer-m.pth (From Dehazeformer)
+    │   └── Dehazeformer-Pretrain.pth
+    └── finetuned_model
+        ├── MSBDN-Finetune.pth
+        └── Dehazeformer-Finetune.pth
 ``` 
+
+* PSD-GCANET, PSD-FFANET, PSD-MSBDN, dehazeformer-m.pth weights는 첨부한 github에서 다운받으시면 됩니다. <br>
+
+    * PSD : https://github.com/zychen-ustc/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors <br>
+    * Dehazeformer : https://github.com/IDKiro/DehazeFormer <br>
+
+* Dehazeformer-Pretrain.pth, Dehazeformer-Finetune.pth, MSBDN-Finetune.pth weights는 gdrive에서 다운받으실 수 있습니다. <br>
+
+    * gdrive : https://drive.google.com/drive/folders/1IvmgsbyakQMcHsNMrdT3awe0NkuzTsxV
 
 ### 2. our_datasets.py
 TrainData_label : Train dataset (gt & hazy) <br>
@@ -64,7 +75,7 @@ ETCDataset : Test dataset (hazy) <br>
 ### 4. wandb_setup_sharing.py
 이전 대회와 동일하게 해당 파일을 복사한 후에 wandb_setup.py로 이름을 바꿔주시고, api_key와 project_name 넣어주시면 됩니다.
 
-### 5. pyiqa
+### 5. IQA-PyTorch
 아래 코드는 공식 github 내용입니다.
 requirements.txt에 있는 torch와 torchvision을 지워주셔야 합니다.
 
