@@ -84,14 +84,17 @@ pip install git+https://github.com/chaofengc/IQA-PyTorch.git
    * Pretrain
    
       ```
-      cd PSD
       python main.py
       ```
    * Finetune
    
       ```
-      cd PSD
       python finetune.py --I_I2_loss --unlabel_index_dir=''
+      ```
+   * Test
+   
+      ```
+      python test.py
       ```
 ## Sky Replacement
 * Dependencies and Installation
