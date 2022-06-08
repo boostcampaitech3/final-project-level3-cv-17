@@ -11,8 +11,6 @@ def find_min_sky_rect(sky_mask):
 
 
 def find_max_sky_rect(mask):
-	
-
 	index=np.where(mask!=0)
 	index= np.array(index,dtype=int)
 	y=index[0,:]
@@ -24,6 +22,9 @@ def find_max_sky_rect(mask):
 	r1=np.max(y)
 	print((r1,c1,r2,c2))
 	return (r1,c1,r2,c2)
+
+
+
 
 def replace_sky(img, img_mask, ref, ref_mask):
 
@@ -146,7 +147,7 @@ def image_stats(image):
 	-------
 	image: NumPy array
 		OpenCV image in L*a*b* color space
-
+		
 	Returns:
 	-------
 	Tuple of mean and standard deviations for the L*, a*, and b*

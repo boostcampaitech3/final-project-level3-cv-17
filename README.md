@@ -1,3 +1,4 @@
+
 ## 미세먼지 없는 맑은 사진
 * CV 17조 MG세대
 * Presentation Slide : https://drive.google.com/drive/folders/1_bYN3mC4viJHQI5G_y1e7f1iK3_IRDwW?usp=sharing
@@ -47,6 +48,16 @@
     make -j 2 run_app
     ```
     - Makefile run_client의 streamlit이 실행되면 해당 url에서 동작을 확인할 수 있습니다.
+
+
+3. 데모 영상
+    - 이미지 업로드 후 Dehazing 실행
+
+![시연-첫부분](https://user-images.githubusercontent.com/48708496/172543350-dedb428c-ce56-4517-851b-8ae2da2a11d0.gif)
+
+    - 원하는 하늘 사진 선택 후 합성
+    
+(영상)
 
 ## Model Process
 ![image](https://user-images.githubusercontent.com/90104418/172589792-e65c3092-38ea-42cc-8fdc-de7f4b548db1.png)

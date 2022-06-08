@@ -28,3 +28,12 @@ PSD/finetuned_model/
 PSD/pretrained_model/
 PSD/clahe/
 PSD/wandb_setup.py
+
+
+serving/app/__pycache__
+serving/app/db/__pycache__
+serving/app/models/__pycache__
+serving/app/models/Dehazing/__pycache__
+serving/app/models/Sky/__pycache__
+serving/app/weights/Dehazing/
+serving/app/weights/Sky/SkySegmentation/
