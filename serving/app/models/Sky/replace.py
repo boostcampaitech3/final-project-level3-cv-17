@@ -15,9 +15,7 @@ def find_max_sky_rect(mask):
 	index= np.array(index,dtype=int)
 	y=index[0,:]
 	x=index[1,:]
-	# 추출된 이미지의 mask가 전부 00이 될 경우
-	# 1.png의 경우 filter base로 추출하면 전부 0이 나옴.
-	# 그럴 경우 오류 발생
+
 	c2=np.min(x)
 	c1=np.max(x)
 	r2=np.min(y)
@@ -26,95 +24,49 @@ def find_max_sky_rect(mask):
 	return (r1,c1,r2,c2)
 
 
-def replace_sky(img, img_mask, ref): # , ref_mask
-	height, width = img_mask.shape
-	sky_resize = cv2.resize(ref, (width, height))
-	
-	mask_bool = (img_mask/255).astype(np.uint8)
-	mask_bool_reverse = (1-img_mask/255).astype(np.uint8)
-	new_img = np.zeros_like(img)
-	new_img += np.repeat(mask_bool[:,:,np.newaxis], 3, axis=2) * sky_resize
-	new_img += np.repeat(mask_bool_reverse[:,:,np.newaxis], 3, axis=2) * img
 
-	return new_img
 
-	# height, width = img_mask.shape
-	# sky_resize = cv2.resize(ref, (width, height))
+def replace_sky(img, img_mask, ref, ref_mask):
 
-	# I_rep = img.copy()
-	# sz = img.shape
+    height, width = img_mask.shape
+    sky_resize = cv2.resize(ref, (width, height))
 
-	# for i in range(sz[0]):
-	# 	for j in range(sz[1]):
-	# 		if(img_mask[i,j].any()):
-	# 			I_rep[i,j,:] = sky_resize[i,j,:]
-	# return I_rep
-# def replace_sky(img,img_mask,ref,ref_mask):
+    mask_bool = (img_mask/255).astype(np.uint8)
+    mask_bool_reverse = (1-img_mask/255).astype(np.uint8)
+    
+    I_rep = np.zeros_like(img)
+    I_rep += np.repeat(mask_bool[:,:,np.newaxis], 3, axis=2) * sky_resize
+    I_rep += np.repeat(mask_bool_reverse[:,:,np.newaxis], 3, axis=2) * img
 
-# 	# rect mask filtering
-# 	y2,x2,y1,x1=find_min_sky_rect(ref_mask)
-# 	print(y2,x2,y1,x1)
-# 	# 이 min조건을 단순히 거는게 아니라 이걸 걸어서 0이 되거나
-# 	# treshold를 못넘으면 제거되게 하면 되겠다.
-# 	roi = ref[y1:y2, x1:x2]
-
-# 	r1,c1,r2,c2=find_max_sky_rect(img_mask)
-# 	height=r1-r2+1
-# 	width=c1-c2+1
-
-# 	sky_resize = cv2.resize(roi, (width, height))
-
-# 	I_rep=img.copy()
-# 	sz=img.shape
-
-# 	for i in range(sz[0]):
-# 			for j in range(sz[1]):
-# 				if(img_mask[i,j].any()):
-# 					I_rep[i,j,:] = sky_resize[i-r2,j-c2,:]
-# 	return I_rep
+    return I_rep
 
 def guideFilter(I, p, mask_edge, winSize, eps):	#input p,giude I
     
 	I=I/255.0
 	p=p/255.0
 	mask_edge=mask_edge/255.0
-	#I的均值平滑
+
 	mean_I = cv2.blur(I, winSize)
     
-    #p的均值平滑
 	mean_p = cv2.blur(p, winSize)
     
-    #I*I和I*p的均值平滑
 	mean_II = cv2.blur(I*I, winSize)
     
 	mean_Ip = cv2.blur(I*p, winSize)
     
-    #方差
-	var_I = mean_II - mean_I * mean_I#方差公式
+	var_I = mean_II - mean_I * mean_I
     
-    #协方差
 	cov_Ip = mean_Ip - mean_I * mean_p
    
 	a = cov_Ip / (var_I + eps)
 	b = mean_p - a*mean_I
     
-    #对a、b进行均值平滑
 	mean_a = cv2.blur(a, winSize)
 	mean_b = cv2.blur(b, winSize)
 
 	q=p.copy()
-	sz=mask_edge.shape
-	# edge=mask_edge.copy()
 	kernel=np.ones((5,5),np.uint8)
-	# kernel=np.array([[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]],np.uint8)
 	edge=cv2.dilate(mask_edge,kernel)
-
-	# edge8=edge*255
-	# edge8=edge8.astype(np.uint8)
-	# mask_edge8=mask_edge*255
-	# mask_edge8=mask_edge8.astype(np.uint8)
-	# cv2.imwrite('d:/MyLearning/DIP/Final_Project/Report/mask_edge.png',mask_edge8)
-	# cv2.imwrite('d:/MyLearning/DIP/Final_Project/Report/edge.png',edge8)
 
 	q[edge==1]=mean_a[edge==1]*I[edge==1]+mean_b[edge==1]
 			
@@ -219,3 +171,200 @@ def compute_dice(y_pred, y_true):
     y_pred, y_true = np.array(y_pred), np.array(y_true)
     y_pred, y_true = np.round(y_pred).astype(int), np.round(y_true).astype(int)
     return np.sum(y_pred[y_true == 1]) * 2.0 / (np.sum(y_pred) + np.sum(y_true))
+
+
+import numpy as np
+import scipy as sp
+import scipy.ndimage
+
+
+def box(img, r):
+    """ O(1) box filter
+        img - >= 2d image
+        r   - radius of box filter
+    """
+    (rows, cols) = img.shape[:2]
+    imDst = np.zeros_like(img)
+
+
+    tile = [1] * img.ndim
+    tile[0] = r
+    imCum = np.cumsum(img, 0)
+    imDst[0:r+1, :, ...] = imCum[r:2*r+1, :, ...]
+    imDst[r+1:rows-r, :, ...] = imCum[2*r+1:rows, :, ...] - imCum[0:rows-2*r-1, :, ...]
+    imDst[rows-r:rows, :, ...] = np.tile(imCum[rows-1:rows, :, ...], tile) - imCum[rows-2*r-1:rows-r-1, :, ...]
+
+    tile = [1] * img.ndim
+    tile[1] = r
+    imCum = np.cumsum(imDst, 1)
+    imDst[:, 0:r+1, ...] = imCum[:, r:2*r+1, ...]
+    imDst[:, r+1:cols-r, ...] = imCum[:, 2*r+1 : cols, ...] - imCum[:, 0 : cols-2*r-1, ...]
+    imDst[:, cols-r: cols, ...] = np.tile(imCum[:, cols-1:cols, ...], tile) - imCum[:, cols-2*r-1 : cols-r-1, ...]
+
+    return imDst
+
+def _gf_color(I, p, r, eps, s=None):
+    """ Color guided filter
+    I - guide image (rgb)
+    p - filtering input (single channel)
+    r - window radius
+    eps - regularization (roughly, variance of non-edge noise)
+    s - subsampling factor for fast guided filter
+    """
+    fullI = I
+    fullP = p
+    if s is not None:
+        I = sp.ndimage.zoom(fullI, [1/s, 1/s, 1], order=1)
+        p = sp.ndimage.zoom(fullP, [1/s, 1/s], order=1)
+        r = round(r / s)
+
+    h, w = p.shape[:2]
+    N = box(np.ones((h, w)), r)
+
+    mI_r = box(I[:,:,0], r) / N
+    mI_g = box(I[:,:,1], r) / N
+    mI_b = box(I[:,:,2], r) / N
+
+    mP = box(p, r) / N
+
+    # mean of I * p
+    mIp_r = box(I[:,:,0]*p, r) / N
+    mIp_g = box(I[:,:,1]*p, r) / N
+    mIp_b = box(I[:,:,2]*p, r) / N
+
+    # per-patch covariance of (I, p)
+    covIp_r = mIp_r - mI_r * mP
+    covIp_g = mIp_g - mI_g * mP
+    covIp_b = mIp_b - mI_b * mP
+
+    # symmetric covariance matrix of I in each patch:
+    #       rr rg rb
+    #       rg gg gb
+    #       rb gb bb
+    var_I_rr = box(I[:,:,0] * I[:,:,0], r) / N - mI_r * mI_r;
+    var_I_rg = box(I[:,:,0] * I[:,:,1], r) / N - mI_r * mI_g;
+    var_I_rb = box(I[:,:,0] * I[:,:,2], r) / N - mI_r * mI_b;
+
+    var_I_gg = box(I[:,:,1] * I[:,:,1], r) / N - mI_g * mI_g;
+    var_I_gb = box(I[:,:,1] * I[:,:,2], r) / N - mI_g * mI_b;
+
+    var_I_bb = box(I[:,:,2] * I[:,:,2], r) / N - mI_b * mI_b;
+
+    a = np.zeros((h, w, 3))
+    for i in range(h):
+        for j in range(w):
+            sig = np.array([
+                [var_I_rr[i,j], var_I_rg[i,j], var_I_rb[i,j]],
+                [var_I_rg[i,j], var_I_gg[i,j], var_I_gb[i,j]],
+                [var_I_rb[i,j], var_I_gb[i,j], var_I_bb[i,j]]
+            ])
+            covIp = np.array([covIp_r[i,j], covIp_g[i,j], covIp_b[i,j]])
+            a[i,j,:] = np.linalg.solve(sig + eps * np.eye(3), covIp)
+
+    b = mP - a[:,:,0] * mI_r - a[:,:,1] * mI_g - a[:,:,2] * mI_b
+
+    meanA = box(a, r) / N[...,np.newaxis]
+    meanB = box(b, r) / N
+
+    if s is not None:
+        meanA = sp.ndimage.zoom(meanA, [s, s, 1], order=1)
+        meanB = sp.ndimage.zoom(meanB, [s, s], order=1)
+
+    q = np.sum(meanA * fullI, axis=2) + meanB
+
+    return q
+
+
+def _gf_gray(I, p, r, eps, s=None):
+    """ grayscale (fast) guided filter
+        I - guide image (1 channel)
+        p - filter input (1 channel)
+        r - window raidus
+        eps - regularization (roughly, allowable variance of non-edge noise)
+        s - subsampling factor for fast guided filter
+    """
+    if s is not None:
+        Isub = sp.ndimage.zoom(I, 1/s, order=1)
+        Psub = sp.ndimage.zoom(p, 1/s, order=1)
+        r = round(r / s)
+    else:
+        Isub = I
+        Psub = p
+
+
+    (rows, cols) = Isub.shape
+
+    N = box(np.ones([rows, cols]), r)
+
+    meanI = box(Isub, r) / N
+    meanP = box(Psub, r) / N
+    corrI = box(Isub * Isub, r) / N
+    corrIp = box(Isub * Psub, r) / N
+    varI = corrI - meanI * meanI
+    covIp = corrIp - meanI * meanP
+
+
+    a = covIp / (varI + eps)
+    b = meanP - a * meanI
+
+    meanA = box(a, r) / N
+    meanB = box(b, r) / N
+
+    if s is not None:
+        meanA = sp.ndimage.zoom(meanA, s, order=1)
+        meanB = sp.ndimage.zoom(meanB, s, order=1)
+
+    q = meanA * I + meanB
+    return q
+
+
+def _gf_colorgray(I, p, r, eps, s=None):
+    """ automatically choose color or gray guided filter based on I's shape """
+    if I.ndim == 2 or I.shape[2] == 1:
+        return _gf_gray(I, p, r, eps, s)
+    elif I.ndim == 3 and I.shape[2] == 3:
+        return _gf_color(I, p, r, eps, s)
+    else:
+        print("Invalid guide dimensions:", I.shape)
+
+
+def guided_filter(I, p, r, eps, s=None):
+    """ run a guided filter per-channel on filtering input p
+        I - guide image (1 or 3 channel)
+        p - filter input (n channel)
+        r - window raidus
+        eps - regularization (roughly, allowable variance of non-edge noise)
+        s - subsampling factor for fast guided filter
+    """
+    if p.ndim == 2:
+        p3 = p[:,:,np.newaxis]
+
+    out = np.zeros_like(p3)
+    for ch in range(p3.shape[2]):
+        out[:,:,ch] = _gf_colorgray(I, p3[:,:,ch], r, eps, s)
+    return np.squeeze(out) if p.ndim == 2 else out
+
+
+def test_gf():
+    import imageio
+    cat = imageio.imread('cat.bmp').astype(np.float32) / 255
+    tulips = imageio.imread('tulips.bmp').astype(np.float32) / 255
+
+    r = 8
+    eps = 0.05
+
+    cat_smoothed = guided_filter(cat, cat, r, eps)
+    cat_smoothed_s4 = guided_filter(cat, cat, r, eps, s=4)
+
+    imageio.imwrite('cat_smoothed.png', cat_smoothed)
+    imageio.imwrite('cat_smoothed_s4.png', cat_smoothed_s4)
+
+    tulips_smoothed4s = np.zeros_like(tulips)
+    for i in range(3):
+        tulips_smoothed4s[:,:,i] = guided_filter(tulips, tulips[:,:,i], r, eps, s=4)
+    imageio.imwrite('tulips_smoothed4s.png', tulips_smoothed4s)
+
+    tulips_smoothed = np.zeros_like(tulips)
+    for i in range(3):
+        tulips_smoothed[:,:,i] = guided_filter(tulips, tulips[:,:,i], r, eps)
+    imageio.imwrite('tulips_smoothed.png', tulips_smoothed)

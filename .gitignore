@@ -1,6 +1,5 @@
 data/
 
-
 SkyReplacement/Replacement/__pycache__/
 SkyReplacement/Replacement/SkySelection/__pycache__/
 SkyReplacement/SkySegmentation/__pycache__/
@@ -18,7 +17,6 @@ SkyReplacement/*.png
 SkyReplacement/SkySegmentation/*.png
 SkyReplacement/SkySegmentation/seg.ipynb
 
-
 PSD/__pycache__
 PSD/datasets/__pycache__
 PSD/models/__pycache__
@@ -30,10 +28,6 @@ PSD/finetuned_model/
 PSD/pretrained_model/
 PSD/clahe/
 PSD/wandb_setup.py
-PSD/__pycache__
-PSD/datasets/__pycache__
-PSD/models/__pycache__
-PSD/output/
 
 
 serving/app/__pycache__
