@@ -1,9 +1,14 @@
 
 ## 🌤️미세먼지 없는 맑은 사진📷 
-<img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white"/> <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white"/> <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white"/> <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white"/> <img src="https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white"/> 
-
-* CV 17조 MG세대
-* Presentation Slide : https://drive.google.com/drive/folders/1_bYN3mC4viJHQI5G_y1e7f1iK3_IRDwW?usp=sharing
+<img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white"/> <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white"/> <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white"/> <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white"/> <img src="https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white"/>                                                                                                                                                                                                                                              
+##### 👉 Presentation Slide : https://drive.google.com/drive/folders/1_bYN3mC4viJHQI5G_y1e7f1iK3_IRDwW?usp=sharing
+## 💁TEAM
+### CV 17조 MG세대
+|민선아|백경륜|이도연|임동우|이효석|
+| :--------: | :--------: | :--------: | :--------: | :--------: |
+|<img src="https://user-images.githubusercontent.com/78402615/172766340-8439701d-e9ac-4c33-a587-9b8895c7ed07.png" width="120" height="120"/>|<img src="https://user-images.githubusercontent.com/78402615/172766371-7d6c6fa3-a7cd-4c21-92f2-12d7726cc6fc.png" width="120" height="120"/>|<img src="https://user-images.githubusercontent.com/78402615/172766390-ee12b216-7fb8-4dad-a171-313e413094a4.png" width="120" height="120"/>|<img src="https://user-images.githubusercontent.com/78402615/172766404-7de4a05a-d193-496f-9b6b-5e5bdd916193.png" width="120" height="120"/>|<img src="https://user-images.githubusercontent.com/78402615/172766321-3b3a4dd4-7428-4c9f-9f91-f69a14c9f8cc.png" width="120" height="120"/>|
+|[@seonahmin](https://github.com/seonahmin)|[@baekkr95](https://github.com/baekkr95)|[@omocomo](https://github.com/omocomo)|[@Dongwoo-Im](https://github.com/Dongwoo-Im)|[@hyoseok1223](https://github.com/hyoseok1223)|
+|Image Dehazing|Product Serving|Product Serving|Image Dehazing|PM, Sky Replacement|
 
 ## Project Abstract
 * Problem Definition
@@ -14,14 +19,15 @@
     * 사용자가 업로드한 Hazy한 이미지를 미세먼지가 없는 선명한 사진으로 변환
     * 사용자는 원하는 Keyword의 하늘 이미지를 업로드한 사진에 합성
 
-## Member Introduction
+<!-- ## Member Introduction
+
 |팀원|Github|역할|
 | :--------: | :--------: | :--------: |
 |[T3078] 민선아|[@seonahmin](https://github.com/seonahmin)|Image Dehazing|
 |[T3101] 백경륜|[@baekkr95](https://github.com/baekkr95)|Product Serving|
 |[T3139] 이도연|[@omocomo](https://github.com/omocomo)|Product Serving|
 |[T3177] 이효석|[@hyoseok1223](https://github.com/hyoseok1223)|PM, Sky Replacement|
-|[T3179] 임동우|[@Dongwoo-Im](https://github.com/Dongwoo-Im)|Image Dehazing|
+|[T3179] 임동우|[@Dongwoo-Im](https://github.com/Dongwoo-Im)|Image Dehazing| -->
 
 ## Service Architecture
 ![image](https://user-images.githubusercontent.com/81875412/172397327-77f34979-b0b4-45f7-992f-b0e126c6d10b.png)
