@@ -30,7 +30,7 @@
 |[T3179] 임동우|[@Dongwoo-Im](https://github.com/Dongwoo-Im)|Image Dehazing| -->
 
 ## 🖥 Service Architecture
-![image](https://user-images.githubusercontent.com/81875412/172397327-77f34979-b0b4-45f7-992f-b0e126c6d10b.png)
+![깃헙서비스사진](https://user-images.githubusercontent.com/48708496/172779913-8815fccf-321d-4ba3-a7b2-8d1d13ef2549.jpg)
 
 ## 🎞 Demo
 * Dependencies and Installation
@@ -59,17 +59,17 @@
 
 
 3. 데모 영상
-    * 이미지 업로드 후 Dehazing 실행
+<h4 align="center">이미지 업로드 후 Dehazing 실행</h4>
 
 ![깃허브데모앞부분](https://user-images.githubusercontent.com/48708496/172776811-ad304a19-2bcd-40b6-ad65-721c10ff2875.gif)
 
-
-   * 원하는 하늘 사진 선택
+<h4 align="center">원하는 하늘 사진 선택</h4>
 
 ![깃허브중간데모](https://user-images.githubusercontent.com/48708496/172778234-978d739f-09cf-400a-820c-44ba229d140f.gif)
 
-   * 하늘 합성까지 완료된 최종 이미지
-   
+
+<h4 align="center">하늘 합성까지 완료된 최종 이미지</h4>
+
 ![깃허브마지막데모](https://user-images.githubusercontent.com/48708496/172778813-a33ceff5-ce4d-4289-978f-a066520b4492.gif)
 
 
