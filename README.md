@@ -10,7 +10,7 @@
 |[@seonahmin](https://github.com/seonahmin)|[@baekkr95](https://github.com/baekkr95)|[@omocomo](https://github.com/omocomo)|[@Dongwoo-Im](https://github.com/Dongwoo-Im)|[@hyoseok1223](https://github.com/hyoseok1223)|
 |Image Dehazing|Product Serving|Product Serving|Image Dehazing|PM, Sky Replacement|
 
-## Project Abstract
+## 📃 Project Abstract
 * Problem Definition
     * 특별한 날, 특별한 장소에서 미세먼지 때문에 원하는 사진을 찍지 못하거나 안 찍는 상황이 생김
     * 하지만 보정에 대한 전문 지식이 부족하거나 필터가 제한되는 경우 사용자가 원하는 방향으로 사진을 보정하기 어려웠음
@@ -29,10 +29,10 @@
 |[T3177] 이효석|[@hyoseok1223](https://github.com/hyoseok1223)|PM, Sky Replacement|
 |[T3179] 임동우|[@Dongwoo-Im](https://github.com/Dongwoo-Im)|Image Dehazing| -->
 
-## Service Architecture
+## 🖥 Service Architecture
 ![image](https://user-images.githubusercontent.com/81875412/172397327-77f34979-b0b4-45f7-992f-b0e126c6d10b.png)
 
-## Demo
+## 🎞 Demo
 * Dependencies and Installation
 
 1. 모델 Weights 다운로드
@@ -61,16 +61,17 @@
 3. 데모 영상
     - 이미지 업로드 후 Dehazing 실행
 
-![시연-첫부분](https://user-images.githubusercontent.com/48708496/172543350-dedb428c-ce56-4517-851b-8ae2da2a11d0.gif)
+![깃허브데모앞부분](https://user-images.githubusercontent.com/48708496/172776811-ad304a19-2bcd-40b6-ad65-721c10ff2875.gif)
+
 
     - 원하는 하늘 사진 선택 후 합성
-    
-(영상)
+   
 
-## Model Process
+
+## 🖼 Model Process
 ![image](https://user-images.githubusercontent.com/90104418/172589792-e65c3092-38ea-42cc-8fdc-de7f4b548db1.png)
 
-## Reference
+## 📖 Reference
 * Image Dehazing
     * PSD : https://github.com/zychen-ustc/PSD-Principled-Synthetic-to-Real-Dehazing-Guided-by-Physical-Priors
     * DehazeFormer : https://github.com/IDKiro/DehazeFormer
