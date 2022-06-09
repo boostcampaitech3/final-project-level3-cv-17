@@ -173,10 +173,7 @@ def find_hsv_upper_lower_threshold_for_skyarea_and_weather_condition(rough_sky_m
      if np.abs(saturation_max - saturation_min) > 50 and weather_condition == "night":
          weather_condition = "nightCloudy"
      
-     return hls_lower_threshold, hsv_upper_threshold, weather_condition # 이런 정보들로부터 날씨 정보를 뽑는다.
-     # 추가적으로 hls 정보를 뽑는다. 
-     # 
-     
+     return hls_lower_threshold, hsv_upper_threshold, weather_condition 
      
 
 def generate_final_sky_mask(initialSkyMask):

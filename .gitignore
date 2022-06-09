@@ -1,4 +1,3 @@
-data/skyseg/
 SkyReplacement/Replacement/__pycache__/
 SkyReplacement/SkySegmentation/__pycache__/
 SkyReplacement/SkySegmentation/mmsegmentation/
