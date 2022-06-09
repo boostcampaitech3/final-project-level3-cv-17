@@ -149,6 +149,8 @@ if __name__ =="__main__":
     else:
         print('넣어주신 하늘 이미지를 사용할 경우 합성시 왜곡이 발생할 수 있습니다.')
 
+    if np.all((sky_mask == 0)):
+        print('이미지에 하늘이 존재하지 않습니다.')
 
     # replace the sky
     I_rep=replace.replace_sky(img,sky_mask,sky,ref_mask)
