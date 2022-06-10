@@ -3,7 +3,7 @@ from odmantic import AIOEngine
 # from app.config import MONGO_DB_NAME, MONGO_URL
 
 MONGO_DB_NAME = 'omocomo'
-MONGO_URL = 'mongodb+srv://omocomo:moco1598*@omocomo.d5ft8.mongodb.net/test'
+MONGO_URL = 'mongodb+srv://'
 
 class MongoDB:
     def __init__(self):
