@@ -140,7 +140,7 @@ def test_resize(haze_img, min_size, max_size, check_size):
 
 def apply_clahe(image):
     clip_limit = 1
-    grid_size = 64
+    grid_size = 16
     # PIL to CV2 
     numpy_image = np.array(image)  
     img = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
@@ -166,7 +166,7 @@ def main():
         image = Image.open(io.BytesIO(image_bytes))
         
         # Image Resize
-        min_size, max_size = 512, 3024
+        min_size, max_size = 512, 1280
         check_size = 16
         image = test_resize(image, min_size, max_size, check_size)
         image_bytes = image_to_bytes(image)

@@ -49,17 +49,17 @@ def low_variance_filter(img, sky_mask):
     varianceBasedSkyMask = np.zeros((img.shape[0],img.shape[1]), dtype=np.uint8)
     
     hls_img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-    _,_, weather_condition  = find_hsv_upper_lower_threshold_for_skyarea_and_weather_condition(sky_mask, hls_img)
-    varianceThreshold = 10
-    if weather_condition == "day":
-        varianceThreshold = 10
-    if weather_condition == "dayCloudy":
-        varianceThreshold = 150 # threshold is increased for cloudy images, as a low threshold will make generate outline by the cloud
-    if weather_condition == "night":
-        varianceThreshold = 5 # threshold is decreased, as the variance in night image for sky is low. This could avoid missing sky pixel
-    if weather_condition == "nightCloudy":
-        varianceThreshold = 20
-
+    # _,_, weather_condition  = find_hsv_upper_lower_threshold_for_skyarea_and_weather_condition(sky_mask, hls_img)
+    # varianceThreshold = 10
+    # if weather_condition == "day":
+    #     varianceThreshold = 10
+    # if weather_condition == "dayCloudy":
+    #     varianceThreshold = 150 # threshold is increased for cloudy images, as a low threshold will make generate outline by the cloud
+    # if weather_condition == "night":
+    #     varianceThreshold = 5 # threshold is decreased, as the variance in night image for sky is low. This could avoid missing sky pixel
+    # if weather_condition == "nightCloudy":
+    #     varianceThreshold = 20
+    varianceThreshold = 150
     varianceBasedSkyMask[img_var <= varianceThreshold] = 1 # 1
 
     # edge post processing
