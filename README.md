@@ -19,6 +19,10 @@
     * 사용자가 업로드한 Hazy한 이미지를 미세먼지가 없는 선명한 사진으로 변환
     * 사용자는 원하는 Keyword의 하늘 이미지를 업로드한 사진에 합성
 
+![image](https://user-images.githubusercontent.com/48708496/173018846-fab41312-88c9-4e31-bf4d-7161060cd7c7.png)
+
+
+
 <!-- ## Member Introduction
 
 |팀원|Github|역할|
