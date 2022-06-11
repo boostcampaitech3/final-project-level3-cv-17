@@ -37,8 +37,17 @@
 ![깃헙서비스사진](https://user-images.githubusercontent.com/48708496/172779913-8815fccf-321d-4ba3-a7b2-8d1d13ef2549.jpg)
 
 ## 🎞 Demo
-* Dependencies and Installation
-
+0. Dependencies and Installation
+   - `environment.yaml`의 name, prefix 설정
+   - 가상환경 생성 및 install
+   
+      ```
+      cd serving
+      conda env create -f environment.yaml # 가상환경 생성 + install
+      conda activate serving # environment.yaml의 name
+      pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu110/torch1.7/index.html
+      ```
+      
 1. 모델 Weights 다운로드
     - `serving/app` 안에 weights 폴더를 만듭니다. 구조는 다음과 같습니다.
     
@@ -54,7 +63,10 @@
       ``` 
     - weights는 [구글 드라이브](https://drive.google.com/drive/folders/1cGudVyyesPung0HcA_IXPMSXmHceMCX-?usp=sharing)에서 다운로드 받을 수 있습니다.
 
-2. 실행 시키기
+2. DB URL 설정
+   - `serving/app/db/__init__.py`의 MONGO_URL 설정
+
+3. 실행 시키기
     ```
     cd serving
     make -j 2 run_app
