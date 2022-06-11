@@ -161,7 +161,7 @@ def replace_sky(dehazed_image, sky_mask, sky, ref_mask):
     ref_mask = load_mask_image(ref_mask)
 
     # 1) color transfer
-    I_rep = replace.replace_sky(dehazed_image, sky_mask, sky) # replace the sky
+    I_rep = replace.replace_sky(dehazed_image, sky_mask, sky, ref_mask) # replace the sky
     transfer = replace.color_transfer(sky,sky_mask,I_rep,1) # color transfer
 
     # 2) histogram matching 
@@ -172,7 +172,7 @@ def replace_sky(dehazed_image, sky_mask, sky, ref_mask):
     # sky_color_down = 0.5 * sky + 75
     # sky_color_down = np.clip(sky_color_down, 0, 255).astype(np.uint8)
     # matched_dehazed_image = match_histograms(dehazed_image, sky_color_down, channel_axis=-1) # histogram matching
-    # I_rep = replace.replace_sky(matched_dehazed_image, sky_mask, sky) # replace the sky
+    # I_rep = replace.replace_sky(matched_dehazed_image, sky_mask, sky, ref_mask) # replace the sky
 
     # 그라데이션
     mask_grad = np.array(Image.open('/opt/ml/input/final-project-level3-cv-17/data/gray_gradient/gray_gradient_v.jpg').resize(dehazed_image.shape[1::-1], Image.BILINEAR))
